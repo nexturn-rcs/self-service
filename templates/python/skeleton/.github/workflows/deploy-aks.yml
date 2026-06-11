@@ -108,18 +108,14 @@ jobs:
         run: |
           kubectl get nodes
 
-      - name: Helm Deploy
+      - name: Deploy Application to AKS via Helm
         run: |
-
-          helm upgrade \
-            --install \
-            "${{ github.event.repository.name }}" \
-            ./deploy/helm \
-            -f "$VALUES_FILE" \
-            --namespace "$NS" \
+          helm upgrade --install ${{ env.IMAGE_NAME }} ./deploy/helm \
+            --namespace ${{ env.NS }} \
             --create-namespace \
-            --set image.repository=${{ vars.ACR_NAME }}.azurecr.io/${{ github.event.repository.name }} \
-            --set image.tag=${{ github.event.workflow_run.head_sha }}
+            -f ${{ env.VALUES_FILE }} \
+            --set image.repository=${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }} \
+            --set image.tag=${{ github.sha }}  # ◄── ADD THIS LINE TO USE THE DYNAMIC TAG
 
       - name: Verify Rollout
         run: |
