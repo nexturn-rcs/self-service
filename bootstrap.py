@@ -89,7 +89,7 @@ def process_templates_and_scaffold(source_dir, target_dir, mappings):
     print("Template generation step completed successfully!")
 
 
-if _name_ == "_main_":
+if __name__ == "_main_":
     # Pull orchestration variables directly from the GitHub environment context
     GITHUB_TOKEN = os.environ["PLATFORM_AUTOMATION_TOKEN"]
     ORG_NAME = "nexturn-rcs"
