@@ -42,15 +42,28 @@ def resolve_ritm_sys_id(base_url: str, auth: HTTPBasicAuth, ritm_sys_id: str, ri
 
 
 def patch_ritm(base_url: str, auth: HTTPBasicAuth, ritm_sys_id: str, payload: dict) -> None:
-    resp = requests.patch(
-        f"{base_url}/api/now/table/sc_req_item/{ritm_sys_id}",
-        auth=auth,
-        headers={"Content-Type": "application/json",
-                 "Accept": "application/json"},
-        json=payload,
-        timeout=30,
-    )
-    resp.raise_for_status()
+    headers = {"Content-Type": "application/json", "Accept": "application/json"}
+    url = f"{base_url}/api/now/table/sc_req_item/{ritm_sys_id}"
+
+    # Separate journal fields from state fields — ServiceNow sometimes
+    # drops journal writes when combined with state transitions
+    journal_fields = {}
+    state_fields = {}
+    for k, v in payload.items():
+        if k in ("comments", "work_notes"):
+            journal_fields[k] = v
+        else:
+            state_fields[k] = v
+
+    # First: update state
+    if state_fields:
+        resp = requests.patch(url, auth=auth, headers=headers, json=state_fields, timeout=30)
+        resp.raise_for_status()
+
+    # Second: write comments/work_notes
+    if journal_fields:
+        resp = requests.patch(url, auth=auth, headers=headers, json=journal_fields, timeout=30)
+        resp.raise_for_status()
 
 
 def build_payload(mode: str, repo_name: str) -> dict:
@@ -101,7 +114,6 @@ def build_payload(mode: str, repo_name: str) -> dict:
     if mode == "failed":
         return {
             "state": "-5",  # On Hold
-            "hold_reason": "3",  # Awaiting vendor (platform team)
             "work_notes": (
                 f"Repository creation FAILED in platform automation pipeline.\n"
                 f"Target repository: nexturn-rcs/{repo_name}\n"
