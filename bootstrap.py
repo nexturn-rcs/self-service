@@ -47,10 +47,9 @@ def create_github_repo(org_name, repo_name, description, token):
 
 
 def process_templates_and_scaffold(source_dir, target_dir, mappings):
-    """Recursively parses template boilerplate, handles file transfers, and replaces tokens."""
-    # Standardize path slashes for the hosting OS
+    """Recursively parses template boilerplate, filtering out any legacy Backstage assets."""
     normalized_source = os.path.normpath(source_dir)
-    print(f"Starting template search inside normalized path: {normalized_source}")
+    print(f"Starting template generation from: {normalized_source}")
    
     if not os.path.exists(normalized_source):
         print(f"❌ ERROR: Source template directory '{normalized_source}' does not exist!")
@@ -64,35 +63,35 @@ def process_templates_and_scaffold(source_dir, target_dir, mappings):
         else:
             dest_root = os.path.join(target_dir, relative_path)
        
-        # Ensure target subdirectories exist
         os.makedirs(dest_root, exist_ok=True)
 
         for file_name in files:
+            # CRITICAL FILTER: Completely skip and omit any legacy Backstage file definitions
+            if file_name == "catalog-info.yaml":
+                print(f"✂️  Skipping and excluding legacy file: {file_name}")
+                continue
+
             src_file_path = os.path.join(root, file_name)
             dest_file_path = os.path.join(dest_root, file_name)
            
             print(f"📄 Processing template file: {os.path.join(relative_path, file_name)}")
 
             try:
-                # Open template file and read its content strings safely
                 with open(src_file_path, 'r', encoding='utf-8', errors='ignore') as f:
                     content = f.read()
                
-                # Iterate and replace every old Backstage placeholder notation
                 for placeholder, live_value in mappings.items():
                     content = content.replace(placeholder, live_value)
                
-                # Save out the compiled, translated code file
                 with open(dest_file_path, 'w', encoding='utf-8') as f:
                     f.write(content)
             except Exception as e:
-                # Fallback handler for binary/images configuration files
                 shutil.copy2(src_file_path, dest_file_path)
 
     print("🏁 Template generation step completed successfully!")
 
 
-if __name__ == "__main__":
+if _name_ == "_main_":
     GITHUB_TOKEN = os.environ["PLATFORM_AUTOMATION_TOKEN"]
     ORG_NAME = "nexturn-rcs"
     SERVICE_NAME = os.environ["SERVICE_NAME"]
@@ -100,10 +99,8 @@ if __name__ == "__main__":
     PYTHON_VERSION = os.environ["PYTHON_VERSION"]
     DESCRIPTION = os.environ.get("DESCRIPTION", "Service managed via Nexturn RCS automation engine")
 
-    # Step A: Run API request to construct remote cloud repository shell
     clone_url = create_github_repo(ORG_NAME, SERVICE_NAME, DESCRIPTION, GITHUB_TOKEN)
 
-    # Step B: Declare old Backstage token configurations to map out
     template_placeholders = {
         "${{ values.owner }}": ORG_NAME,
         "${{ values.repoName }}": SERVICE_NAME,
@@ -112,7 +109,6 @@ if __name__ == "__main__":
         "${{ values.description }}": DESCRIPTION
     }
 
-    # Step C: Compile files locally into checked-out workspace directory
     process_templates_and_scaffold(
         source_dir="templates/python/skeleton",
         target_dir="workspace_repo",

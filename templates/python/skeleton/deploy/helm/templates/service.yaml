@@ -5,7 +5,6 @@ metadata:
   name: {{ .Release.Name }}
   labels:
     app: {{ .Release.Name }}
-    backstage.io/kubernetes-id: {{ .Release.Name }}
 
 spec:
   selector:

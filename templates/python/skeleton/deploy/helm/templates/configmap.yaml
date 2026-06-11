@@ -4,7 +4,7 @@ kind: ConfigMap
 metadata:
   name: {{ .Release.Name }}-config
   labels:
-    backstage.io/kubernetes-id: {{ .Release.Name }}
+    app: {{ .Release.Name }}
 
 data:
 {{- range $key, $value := .Values.config }}
