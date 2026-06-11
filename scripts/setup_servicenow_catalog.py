@@ -192,7 +192,7 @@ class SnowSetup:
                 "name": "New Repository Onboarding Request",
                 "short_description": (
                     "Request a new GitHub repository with production-ready "
-                    "starter code, Dockerfile, Helm charts, and CI/CD pipelines"
+                    "starter code, Dockerization, Helm charts, and CI/CD pipelines"
                 ),
                 "description": (
                     "<h3>Repository Onboarding Request</h3>"
@@ -202,7 +202,7 @@ class SnowSetup:
                     "<ul>"
                     "<li>Create a private GitHub repository</li>"
                     "<li>Scaffold production-ready Python starter code (FastAPI)</li>"
-                    "<li>Add a multi-stage, security-hardened Dockerfile</li>"
+                    "<li>Enable Dockerization</li>"
                     "<li>Include unit test scaffolding</li>"
                     "<li>Configure Helm chart for AKS deployment</li>"
                     "<li>Set up CI/CD pipeline workflows</li>"

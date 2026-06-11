@@ -103,10 +103,13 @@ def build_payload(mode: str, repo_name: str) -> dict:
                 f"Branch     : develop\n\n"
                 f"Your new repository includes:\n"
                 f"  - Production-ready Python starter code\n"
-                f"  - Multi-stage Dockerfile\n"
+                f"  - Enabled Dockerization\n"
                 f"  - Helm chart for AKS deployment\n"
                 f"  - CI/CD pipeline workflows\n"
                 f"  - Azure credentials pre-configured\n\n"
+                f"Refer to the Actions tab in GitHub for workflow runs: "
+                f"https://github.com/nexturn-rcs/{repo_name}/actions\n\n"
+                f"Contact us at platformsupport@nexturn.com in case of run failures.\n\n"
                 f"Happy coding!"
             ),
         }
