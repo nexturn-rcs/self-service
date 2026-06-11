@@ -91,7 +91,7 @@ def process_templates_and_scaffold(source_dir, target_dir, mappings):
     print("🏁 Template generation step completed successfully!")
 
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     GITHUB_TOKEN = os.environ["PLATFORM_AUTOMATION_TOKEN"]
     ORG_NAME = "nexturn-rcs"
     SERVICE_NAME = os.environ["SERVICE_NAME"]
