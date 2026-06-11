@@ -108,14 +108,16 @@ jobs:
         run: |
           kubectl get nodes
 
-      - name: Deploy Application to AKS via Helm
+      - name: Helm Deploy
         run: |
-          # Use the env context directly so GitHub Actions can safely inject the variables
-          helm upgrade --install ${{ env.IMAGE_NAME }} ./deploy/helm \
-            --namespace ${{ env.NS }} \
+          helm upgrade \
+            --install \
+            "${{ github.event.repository.name }}" \
+            ./deploy/helm \
+            -f "$VALUES_FILE" \
+            --namespace "$NS" \
             --create-namespace \
-            -f ${{ env.VALUES_FILE }} \
-            --set image.repository=${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }} \
+            --set image.repository=${{ vars.ACR_NAME }}.azurecr.io/${{ github.event.repository.name }} \
             --set image.tag=${{ github.sha }}
 
       - name: Verify Rollout
