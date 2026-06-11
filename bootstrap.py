@@ -48,31 +48,33 @@ def create_github_repo(org_name, repo_name, description, token):
 
 def process_templates_and_scaffold(source_dir, target_dir, mappings):
     """Recursively parses template boilerplate, handles file transfers, and replaces tokens."""
-    print(f"Starting template search inside: {source_dir}")
+    # Standardize path slashes for the hosting OS
+    normalized_source = os.path.normpath(source_dir)
+    print(f"Starting template search inside normalized path: {normalized_source}")
    
-    if not os.path.exists(source_dir):
-        print(f"❌ ERROR: Source template directory '{source_dir}' does not exist!")
+    if not os.path.exists(normalized_source):
+        print(f"❌ ERROR: Source template directory '{normalized_source}' does not exist!")
         return
 
-    for root, dirs, files in os.walk(source_dir):
-        relative_path = os.path.relpath(root, source_dir)
+    for root, dirs, files in os.walk(normalized_source):
+        relative_path = os.path.relpath(root, normalized_source)
        
         if relative_path == ".":
             dest_root = target_dir
         else:
             dest_root = os.path.join(target_dir, relative_path)
        
-        # CRITICAL FIX: Always ensure the target directory structure exists first!
+        # Ensure target subdirectories exist
         os.makedirs(dest_root, exist_ok=True)
 
         for file_name in files:
             src_file_path = os.path.join(root, file_name)
             dest_file_path = os.path.join(dest_root, file_name)
            
-            print(f"Processing file: {relative_path}/{file_name}")
+            print(f"📄 Processing template file: {os.path.join(relative_path, file_name)}")
 
             try:
-                # Open template file and read its content strings
+                # Open template file and read its content strings safely
                 with open(src_file_path, 'r', encoding='utf-8', errors='ignore') as f:
                     content = f.read()
                
@@ -90,7 +92,7 @@ def process_templates_and_scaffold(source_dir, target_dir, mappings):
     print("🏁 Template generation step completed successfully!")
 
 
-if __name__ == "_main_":
+if __name__ == "__main__":
     GITHUB_TOKEN = os.environ["PLATFORM_AUTOMATION_TOKEN"]
     ORG_NAME = "nexturn-rcs"
     SERVICE_NAME = os.environ["SERVICE_NAME"]
