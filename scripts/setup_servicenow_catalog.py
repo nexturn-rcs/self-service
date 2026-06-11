@@ -113,7 +113,8 @@ class SnowSetup:
     def __init__(self, base_url: str, username: str, password: str):
         self.base_url = base_url.rstrip("/")
         self.auth = HTTPBasicAuth(username, password)
-        self.headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        self.headers = {"Content-Type": "application/json",
+                        "Accept": "application/json"}
 
     def _get(self, table: str, query: str, limit: int = 1):
         resp = requests.get(
@@ -539,7 +540,8 @@ Next Steps:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Setup ServiceNow catalog for repo onboarding")
+    parser = argparse.ArgumentParser(
+        description="Setup ServiceNow catalog for repo onboarding")
     parser.add_argument("--snow-url", required=True)
     parser.add_argument("--snow-user", required=True)
     parser.add_argument("--snow-pass", required=True)
