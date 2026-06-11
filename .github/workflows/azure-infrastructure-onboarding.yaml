@@ -1,0 +1,190 @@
+name: Service Composer
+
+on:
+  workflow_dispatch:
+    inputs:
+      ticket:
+        description: Ticket Number (e.g. OTIS-123)
+        required: true
+        type: string
+
+      project:
+        description: Project Name
+        required: true
+        type: string
+
+      environment:
+        description: Environment
+        required: true
+        type: choice
+        options:
+          - dev
+          - stage
+          - prod
+
+      location:
+        description: Azure Location
+        required: true
+        default: eastus
+        type: string
+
+      enable_aks:
+        description: Enable AKS
+        required: true
+        type: boolean
+
+      enable_storage:
+        description: Enable Storage
+        required: true
+        type: boolean
+
+      enable_sql:
+        description: Enable SQL
+        required: true
+        type: boolean
+
+      enable_keyvault:
+        description: Enable KeyVault
+        required: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  create-resource-group:
+
+    runs-on: ubuntu-latest
+
+    env:
+      PROJECT_NAME: ${{ inputs.project }}
+      ENVIRONMENT: ${{ inputs.environment }}
+      LOCATION: ${{ inputs.location }}
+
+      ENABLE_AKS: ${{ inputs.enable_aks }}
+      ENABLE_STORAGE: ${{ inputs.enable_storage }}
+      ENABLE_SQL: ${{ inputs.enable_sql }}
+      ENABLE_KEYVAULT: ${{ inputs.enable_keyvault }}
+
+      RESOURCE_GROUP: rg-${{ inputs.project }}-${{ inputs.environment }}
+
+    steps:
+
+      #####################################################################
+      # Checkout current repo (contains templates/service-composer)
+      #####################################################################
+
+      - name: Checkout IDP Repository
+        uses: actions/checkout@v6
+        with:
+          path: idp
+
+      #####################################################################
+      # Checkout target repository
+      #####################################################################
+
+      - name: Checkout Azure Infrastructure Repository
+        uses: actions/checkout@v6
+        with:
+          repository: nexturn-rcs/azure-infrastructure
+          token: ${{ secrets.PLATFORM_AUTOMATION_TOKEN }}
+          path: azure-infra
+
+      #####################################################################
+      # Install envsubst
+      #####################################################################
+
+      - name: Install gettext
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gettext-base
+
+      #####################################################################
+      # Create RG folder and copy templates
+      #####################################################################
+
+      - name: Generate Resource Group Files
+        run: |
+
+          echo "Resource Group: ${RESOURCE_GROUP}"
+
+          mkdir -p \
+            "azure-infra/resource_groups/${RESOURCE_GROUP}"
+
+          cp -R \
+            idp/templates/service-composer/. \
+            "azure-infra/resource_groups/${RESOURCE_GROUP}/"
+
+      #####################################################################
+      # Apply envsubst to every template file
+      #####################################################################
+
+      - name: Apply Template Variables
+        run: |
+
+          find "azure-infra/resource_groups/${RESOURCE_GROUP}" \
+            -type f | while read -r file
+          do
+            echo "Processing $file"
+
+            envsubst < "$file" > "${file}.tmp"
+
+            mv "${file}.tmp" "$file"
+          done
+
+      #####################################################################
+      # Show generated files (for debugging)
+      #####################################################################
+
+      - name: Show Generated Files
+        run: |
+
+          echo "Generated content"
+
+          find \
+            "azure-infra/resource_groups/${RESOURCE_GROUP}" \
+            -type f \
+            -exec echo "==== {} ====" \; \
+            -exec cat {} \;
+
+      #####################################################################
+      # Create PR in azure-infrastructure repository
+      #####################################################################
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.PLATFORM_AUTOMATION_TOKEN }}
+          path: azure-infra
+          branch: feature/${{ inputs.ticket }}
+          base: develop
+          delete-branch: false
+          commit-message: |
+            ${{ inputs.ticket }}: Add ${{
+            env.RESOURCE_GROUP }}
+          title: |
+            ${{ inputs.ticket }}: Add ${{
+            env.RESOURCE_GROUP }}
+          body: |
+            ## Resource Group Provisioning Request
+            ### Project
+            Project Name: ${{ inputs.project }}
+            Environment: ${{ inputs.environment }}
+            Location: ${{ inputs.location }}
+            Resource Group:
+            `${{ env.RESOURCE_GROUP }}`
+            ### Enabled Services
+
+            | Service | Enabled |
+            |----------|----------|
+            | AKS | ${{ inputs.enable_aks }} |
+            | Storage | ${{ inputs.enable_storage }} |
+            | SQL | ${{ inputs.enable_sql }} |
+            | KeyVault | ${{ inputs.enable_keyvault }} |
+
+            Generated automatically by Platform Team.
+
+          labels: |
+            automation
+            infrastructure
+            service-composer

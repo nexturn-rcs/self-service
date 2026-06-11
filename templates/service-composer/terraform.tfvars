@@ -1,0 +1,8 @@
+project_name     = "${PROJECT_NAME}"
+environment      = "${ENVIRONMENT}"
+resource_group   = "${RESOURCE_GROUP}"
+location         = "${LOCATION}"
+enable_aks       = "${ENABLE_AKS}"
+enable_storage   = "${ENABLE_STORAGE}"
+enable_sql       = "${ENABLE_SQL}"
+enable_key_vault = "${ENABLE_KEYVAULT}"

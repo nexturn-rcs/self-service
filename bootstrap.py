@@ -4,7 +4,6 @@ import shutil
 import sys
 import urllib.request
 
-
 def create_github_repo(org_name, repo_name, description, token):
     """Sends a POST request to GitHub REST API to provision a new organization repository."""
     url = f"https://api.github.com/orgs/{org_name}/repos"
@@ -121,7 +120,7 @@ if __name__ == "__main__":
     }
 
     process_templates_and_scaffold(
-        source_dir="templates/python/skeleton",
+        source_dir="templates/python",
         target_dir="workspace_repo",
         mappings=template_placeholders
     )
