@@ -11,7 +11,7 @@ def create_github_repo(org_name, repo_name, description, token):
     payload = {
         "name": repo_name,
         "description": description,
-        "private": True,  # Standard secure default for enterprise repos
+        "private": True,
         "has_issues": True,
         "has_projects": False,
         "has_wiki": False
@@ -38,41 +38,42 @@ def create_github_repo(org_name, repo_name, description, token):
             return res_data['clone_url']
     except urllib.error.HTTPError as e:
         error_body = e.read().decode('utf-8')
-        # If the repository already exists, log a warning and proceed instead of crashing
         if e.code == 422 and "already exists" in error_body:
-            print(f"⚠️ Warning: Repository '{repo_name}' already exists in organization '{org_name}'. Continuing with scaffold compilation...")
+            print(f"⚠️ Warning: Repository '{repo_name}' already exists. Continuing scaffolding...")
             return f"https://github.com/{org_name}/{repo_name}.git"
         else:
             print(f"❌ Failed to create repository via API. Status Code: {e.code}")
-            print(f"Error details: {error_body}")
             raise e
 
 
 def process_templates_and_scaffold(source_dir, target_dir, mappings):
     """Recursively parses template boilerplate, handles file transfers, and replaces tokens."""
-    print(f"Starting template interpolation: {source_dir} -> {target_dir}")
+    print(f"Starting template search inside: {source_dir}")
    
+    if not os.path.exists(source_dir):
+        print(f"❌ ERROR: Source template directory '{source_dir}' does not exist!")
+        return
+
     for root, dirs, files in os.walk(source_dir):
-        # Determine current path level relative to template root
         relative_path = os.path.relpath(root, source_dir)
-        dest_root = target_dir if relative_path == "." else os.path.join(target_dir, relative_path)
        
-        # Ensure targeted directory trees exist locally
-        if not os.path.exists(dest_root):
-            os.makedirs(dest_root)
+        if relative_path == ".":
+            dest_root = target_dir
+        else:
+            dest_root = os.path.join(target_dir, relative_path)
+       
+        # CRITICAL FIX: Always ensure the target directory structure exists first!
+        os.makedirs(dest_root, exist_ok=True)
 
         for file_name in files:
             src_file_path = os.path.join(root, file_name)
             dest_file_path = os.path.join(dest_root, file_name)
-
-            # Skip changing variables in standard workflow files if they break actions syntax
-            if ".github/workflows" in src_file_path:
-                shutil.copy2(src_file_path, dest_file_path)
-                continue
+           
+            print(f"Processing file: {relative_path}/{file_name}")
 
             try:
                 # Open template file and read its content strings
-                with open(src_file_path, 'r', encoding='utf-8') as f:
+                with open(src_file_path, 'r', encoding='utf-8', errors='ignore') as f:
                     content = f.read()
                
                 # Iterate and replace every old Backstage placeholder notation
@@ -83,14 +84,13 @@ def process_templates_and_scaffold(source_dir, target_dir, mappings):
                 with open(dest_file_path, 'w', encoding='utf-8') as f:
                     f.write(content)
             except Exception as e:
-                # Fallback handler to copy media/binary files directly without reading text
+                # Fallback handler for binary/images configuration files
                 shutil.copy2(src_file_path, dest_file_path)
 
-    print("Template generation step completed successfully!")
+    print("🏁 Template generation step completed successfully!")
 
 
 if __name__ == "_main_":
-    # Pull orchestration variables directly from the GitHub environment context
     GITHUB_TOKEN = os.environ["PLATFORM_AUTOMATION_TOKEN"]
     ORG_NAME = "nexturn-rcs"
     SERVICE_NAME = os.environ["SERVICE_NAME"]
