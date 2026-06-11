@@ -97,6 +97,7 @@ jobs:
           gh variable set PROJECT_NAME --body "${{ github.event.inputs.project_name }}" --repo "$REPO_SLUG"
           gh variable set PYTHON_VER --body "${{ github.event.inputs.python_version }}" --repo "$REPO_SLUG"
           gh variable set ACR_NAME --body "nextopsacrdemo" --repo "$REPO_SLUG"
+          gh variable set DEPLOY_TARGET --body "AKS" --repo "$REPO_SLUG"
 
       # 7. Apply subscription encryption security certificates
       - name: Propagate Global Cloud Infrastructure Secrets
