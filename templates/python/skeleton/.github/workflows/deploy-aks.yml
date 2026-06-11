@@ -110,12 +110,13 @@ jobs:
 
       - name: Deploy Application to AKS via Helm
         run: |
+          # Use the env context directly so GitHub Actions can safely inject the variables
           helm upgrade --install ${{ env.IMAGE_NAME }} ./deploy/helm \
             --namespace ${{ env.NS }} \
             --create-namespace \
             -f ${{ env.VALUES_FILE }} \
             --set image.repository=${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }} \
-            --set image.tag=${{ github.sha }}  # ◄── ADD THIS LINE TO USE THE DYNAMIC TAG
+            --set image.tag=${{ github.sha }}
 
       - name: Verify Rollout
         run: |
