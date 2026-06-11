@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import sys
 import urllib.request
 
 
@@ -39,8 +40,9 @@ def create_github_repo(org_name, repo_name, description, token):
     except urllib.error.HTTPError as e:
         error_body = e.read().decode('utf-8')
         if e.code == 422 and "already exists" in error_body:
-            print(f"⚠️ Warning: Repository '{repo_name}' already exists. Continuing scaffolding...")
-            return f"https://github.com/{org_name}/{repo_name}.git"
+            print(f"❌ ERROR: Repository '{repo_name}' already exists in organization '{org_name}'.")
+            print(f"   Please choose a different service name or contact platformsupport@nexturn.com")
+            sys.exit(1)
         else:
             print(f"❌ Failed to create repository via API. Status Code: {e.code}")
             raise e
