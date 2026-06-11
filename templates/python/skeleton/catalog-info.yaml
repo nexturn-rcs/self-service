@@ -1,0 +1,30 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ${{ values.repoName }}
+  annotations:
+    github.com/project-slug: ${{ values.owner }}/${{ values.repoName }}
+    backstage.io/kubernetes-id: ${{ values.repoName }}
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: service
+  lifecycle: production
+  owner: guests
+
+  providesApis:
+    - ${{ values.repoName }}-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+
+metadata:
+  name: ${{ values.repoName }}-api
+
+spec:
+  type: openapi
+  lifecycle: development
+  owner: guests
+
+  definition:
+    $text: ./openapi.yaml

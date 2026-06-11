@@ -1,0 +1,143 @@
+name: Deploy AKS
+
+on:
+  workflow_run:
+    workflows:
+      - Build
+    types:
+      - completed
+
+permissions:
+  contents: read
+
+jobs:
+
+  deploy:
+
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout Build Commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Determine Environment
+        run: |
+
+          BRANCH="${{ github.event.workflow_run.head_branch }}"
+
+          echo "Branch: $BRANCH"
+
+          if [[ "$BRANCH" == feature/* ]]; then
+            ENV=dev
+
+          elif [[ "$BRANCH" == "develop" ]]; then
+            ENV=dev
+
+          elif [[ "$BRANCH" == release/* ]]; then
+            ENV=stage
+
+          elif [[ "$BRANCH" == "main" ]]; then
+            ENV=prod
+
+          else
+            echo "Unsupported branch"
+            exit 1
+          fi
+
+          echo "ENVIRONMENT=$ENV" >> $GITHUB_ENV
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq \
+            https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Resolve Deployment Configuration
+        run: |
+
+          RG=$(yq ".${ENVIRONMENT}.resourceGroup" deploy/environments.yaml)
+
+          AKS=$(yq ".${ENVIRONMENT}.aksCluster" deploy/environments.yaml)
+
+          NS="${{ vars.PROJECT_NAME }}-${ENVIRONMENT}"
+
+          VALUES_FILE="deploy/helm/values/${ENVIRONMENT}.yaml"
+
+          echo "RG=$RG" >> $GITHUB_ENV
+          echo "AKS=$AKS" >> $GITHUB_ENV
+          echo "NS=$NS" >> $GITHUB_ENV
+          echo "VALUES_FILE=$VALUES_FILE" >> $GITHUB_ENV
+
+          echo "Resource Group : $RG"
+          echo "AKS Cluster    : $AKS"
+          echo "Namespace      : $NS"
+          echo "Values File    : $VALUES_FILE"
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: |
+            {
+              "clientId":"${{ secrets.AZURE_CLIENT_ID }}",
+              "clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}",
+              "subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}",
+              "tenantId":"${{ secrets.AZURE_TENANT_ID }}"
+            }
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: AKS Login
+        run: |
+
+          az aks get-credentials \
+            --resource-group "$RG" \
+            --name "$AKS" \
+            --overwrite-existing
+
+      - name: Verify Cluster
+        run: |
+          kubectl get nodes
+
+      - name: Helm Deploy
+        run: |
+
+          helm upgrade \
+            --install \
+            "${{ github.event.repository.name }}" \
+            ./deploy/helm \
+            -f "$VALUES_FILE" \
+            --namespace "$NS" \
+            --create-namespace \
+            --set image.repository=${{ vars.ACR_NAME }}.azurecr.io/${{ github.event.repository.name }} \
+            --set image.tag=${{ github.event.workflow_run.head_sha }}
+
+      - name: Verify Rollout
+        run: |
+
+          kubectl rollout status \
+            deployment/${{ github.event.repository.name }} \
+            -n "$NS" \
+            --timeout=300s
+
+      - name: Deployment Summary
+        run: |
+
+          echo "=================================="
+          echo "Deployment Successful"
+          echo "=================================="
+          echo "Environment : $ENVIRONMENT"
+          echo "RG          : $RG"
+          echo "AKS         : $AKS"
+          echo "Namespace   : $NS"
+          echo "Image       : ${{ vars.ACR_NAME }}.azurecr.io/${{ github.event.repository.name }}:${{ github.event.workflow_run.head_sha }}"
+          echo "=================================="

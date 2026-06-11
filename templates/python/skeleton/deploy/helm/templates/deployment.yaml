@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ .Release.Name }}
+
+  labels:
+    app: {{ .Release.Name }}
+    backstage.io/kubernetes-id: {{ .Release.Name }}
+
+spec:
+  replicas: {{ .Values.replicaCount }}
+
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+        backstage.io/kubernetes-id: {{ .Release.Name }}
+
+    spec:
+      containers:
+        - name: {{ .Release.Name }}
+
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          envFrom:
+            - configMapRef:
+                name: {{ .Release.Name }}-config
+          
+            - secretRef:
+                name: {{ .Release.Name }}-secret
+
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.livenessProbe.path }}
+              port: {{ .Values.service.targetPort }}
+
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.readinessProbe.path }}
+              port: {{ .Values.service.targetPort }}
+
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
