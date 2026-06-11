@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """Update ServiceNow RITM status/comments from GitHub Actions."""
 
 import argparse
@@ -45,7 +45,7 @@ def patch_ritm(base_url: str, auth: HTTPBasicAuth, ritm_sys_id: str, payload: di
     headers = {"Content-Type": "application/json", "Accept": "application/json"}
     url = f"{base_url}/api/now/table/sc_req_item/{ritm_sys_id}"
 
-    # Separate journal fields from state fields — ServiceNow sometimes
+    # Separate journal fields from state fields â€” ServiceNow sometimes
     # drops journal writes when combined with state transitions
     journal_fields = {}
     state_fields = {}
@@ -113,7 +113,7 @@ def build_payload(mode: str, repo_name: str) -> dict:
 
     if mode == "failed":
         return {
-            "state": "-5",  # On Hold
+            "state": "2",  # Work in Progress
             "work_notes": (
                 f"Repository creation FAILED in platform automation pipeline.\n"
                 f"Target repository: nexturn-rcs/{repo_name}\n"
