@@ -110,6 +110,14 @@ jobs:
           AZURE_SUBSCRIPTION_ID: ${{ secrets.GLOBAL_AZURE_SUBSCRIPTION_ID }}
         run: |
           echo "Setting access tokens on $REPO_SLUG..."
+          
+          # Create the structured Azure JSON payload string
+          AZURE_JSON_CREDS='{"clientId":"'"$AZURE_CLIENT_ID"'","clientSecret":"'"$AZURE_CLIENT_SECRET"'","subscriptionId":"'"$AZURE_SUBSCRIPTION_ID"'","tenantId":"'"$AZURE_TENANT_ID"'"}'
+          
+          # Push the single combined secret that azure/login expects!
+          gh secret set AZURE_CREDENTIALS --body "$AZURE_JSON_CREDS" --repo "$REPO_SLUG"
+          
+          # Keep the individual ones as well just in case individual scripts need them
           gh secret set AZURE_CLIENT_ID --body "$AZURE_CLIENT_ID" --repo "$REPO_SLUG"
           gh secret set AZURE_CLIENT_SECRET --body "$AZURE_CLIENT_SECRET" --repo "$REPO_SLUG"
           gh secret set AZURE_TENANT_ID --body "$AZURE_TENANT_ID" --repo "$REPO_SLUG"
