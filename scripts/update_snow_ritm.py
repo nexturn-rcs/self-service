@@ -45,7 +45,8 @@ def patch_ritm(base_url: str, auth: HTTPBasicAuth, ritm_sys_id: str, payload: di
     resp = requests.patch(
         f"{base_url}/api/now/table/sc_req_item/{ritm_sys_id}",
         auth=auth,
-        headers={"Content-Type": "application/json", "Accept": "application/json"},
+        headers={"Content-Type": "application/json",
+                 "Accept": "application/json"},
         json=payload,
         timeout=30,
     )
@@ -99,17 +100,20 @@ def build_payload(mode: str, repo_name: str) -> dict:
 
     if mode == "failed":
         return {
-            "state": "2",  # Keep in Work in Progress (not closed)
+            "state": "-5",  # On Hold
+            "hold_reason": "3",  # Awaiting vendor (platform team)
             "work_notes": (
                 f"Repository creation FAILED in platform automation pipeline.\n"
                 f"Target repository: nexturn-rcs/{repo_name}\n"
                 f"Failed at: {stamp}\n"
-                f"Action required: Platform team investigation needed."
+                f"Action required: Platform team investigation needed.\n"
+                f"Ticket placed On Hold pending resolution."
             ),
             "comments": (
                 "Unfortunately, repository creation has failed. "
                 "Please check with Platform Team DL: platformsupport@nexturn.com\n\n"
                 "The platform team has been notified and will investigate. "
+                "This ticket has been placed On Hold until the issue is resolved. "
                 "You do not need to raise a separate ticket."
             ),
         }
@@ -118,8 +122,10 @@ def build_payload(mode: str, repo_name: str) -> dict:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Update ServiceNow RITM from workflow")
-    parser.add_argument("--mode", choices=["in_progress", "success", "failed"], required=True)
+    parser = argparse.ArgumentParser(
+        description="Update ServiceNow RITM from workflow")
+    parser.add_argument(
+        "--mode", choices=["in_progress", "success", "failed"], required=True)
     args = parser.parse_args()
 
     base_url = get_env("SNOW_INSTANCE_URL")
@@ -130,11 +136,13 @@ def main() -> None:
     ritm_sys_id = get_env("RITM_SYS_ID", required=False)
 
     auth = HTTPBasicAuth(username, password)
-    resolved_sys_id = resolve_ritm_sys_id(base_url, auth, ritm_sys_id, ritm_number)
+    resolved_sys_id = resolve_ritm_sys_id(
+        base_url, auth, ritm_sys_id, ritm_number)
     payload = build_payload(args.mode, repo_name)
 
     patch_ritm(base_url, auth, resolved_sys_id, payload)
-    print(f"Updated RITM {ritm_number or resolved_sys_id} with mode={args.mode}")
+    print(
+        f"Updated RITM {ritm_number or resolved_sys_id} with mode={args.mode}")
 
 
 if __name__ == "__main__":
