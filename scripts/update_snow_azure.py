@@ -89,7 +89,11 @@ def build_payload(mode: str) -> dict:
         resource_details = get_env("RESOURCE_DETAILS", required=False) or ""
         resources_section = ""
         if resource_details:
-            resources_section = f"\nProvisioned Resources:\n{resource_details}\n"
+            resources_section = (
+                f"\n"
+                f"Provisioned Resources:\n"
+                f"{resource_details}\n"
+            )
         return {
             "state": "3",  # Closed Complete
             "close_notes": f"Infrastructure deployed successfully: {rg}",
@@ -105,8 +109,8 @@ def build_payload(mode: str) -> dict:
                 f"Resource Group : {rg}\n"
                 f"Deployed at    : {stamp}\n"
                 f"{resources_section}"
-                f"Your resources are now live and ready to use.\n"
-                f"Refer to the Azure Portal for resource details.\n"
+                f"Your resources are now live and ready to use.\n\n"
+                f"You can view your resources in the Azure Portal.\n"
                 f"Contact us at platformsupport@nexturn.com in case of any issues."
             ),
         }
@@ -150,7 +154,8 @@ def build_payload(mode: str) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Update ServiceNow RITM for Azure infra")
-    parser.add_argument("--mode", choices=["pr_created", "deploy_success", "deploy_failed", "failed"], required=True)
+    parser.add_argument(
+        "--mode", choices=["pr_created", "deploy_success", "deploy_failed", "failed"], required=True)
     args = parser.parse_args()
 
     base_url = get_env("SNOW_INSTANCE_URL")
