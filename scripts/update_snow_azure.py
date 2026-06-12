@@ -25,7 +25,8 @@ def resolve_ritm_sys_id(base_url: str, auth: HTTPBasicAuth, ritm_sys_id: str, ri
         f"{base_url}/api/now/table/sc_req_item",
         auth=auth,
         headers={"Accept": "application/json"},
-        params={"sysparm_query": f"number={ritm_number}", "sysparm_fields": "sys_id", "sysparm_limit": 1},
+        params={"sysparm_query": f"number={ritm_number}",
+                "sysparm_fields": "sys_id", "sysparm_limit": 1},
         timeout=30,
     )
     resp.raise_for_status()
@@ -36,17 +37,22 @@ def resolve_ritm_sys_id(base_url: str, auth: HTTPBasicAuth, ritm_sys_id: str, ri
 
 
 def patch_ritm(base_url: str, auth: HTTPBasicAuth, ritm_sys_id: str, payload: dict) -> None:
-    headers = {"Content-Type": "application/json", "Accept": "application/json"}
+    headers = {"Content-Type": "application/json",
+               "Accept": "application/json"}
     url = f"{base_url}/api/now/table/sc_req_item/{ritm_sys_id}"
 
     # Separate state fields from journal fields to avoid drops
-    journal = {k: v for k, v in payload.items() if k in ("comments", "work_notes")}
-    state = {k: v for k, v in payload.items() if k not in ("comments", "work_notes")}
+    journal = {k: v for k, v in payload.items() if k in (
+        "comments", "work_notes")}
+    state = {k: v for k, v in payload.items(
+    ) if k not in ("comments", "work_notes")}
 
     if state:
-        requests.patch(url, auth=auth, headers=headers, json=state, timeout=30).raise_for_status()
+        requests.patch(url, auth=auth, headers=headers,
+                       json=state, timeout=30).raise_for_status()
     if journal:
-        requests.patch(url, auth=auth, headers=headers, json=journal, timeout=30).raise_for_status()
+        requests.patch(url, auth=auth, headers=headers,
+                       json=journal, timeout=30).raise_for_status()
 
 
 def build_payload(mode: str) -> dict:
@@ -55,27 +61,63 @@ def build_payload(mode: str) -> dict:
     rg = get_env("RESOURCE_GROUP", required=False) or f"rg-{project}"
     pr_url = get_env("PR_URL", required=False) or ""
 
-    if mode == "success":
-        pr_info = f"\nPull Request : {pr_url}" if pr_url else ""
+    if mode == "pr_created":
         return {
-            "state": "3",  # Closed Complete
-            "close_notes": f"Infrastructure provisioned: {rg}",
+            "state": "2",  # Work in Progress
             "work_notes": (
-                f"Azure infrastructure provisioning completed successfully.\n"
+                f"Pull Request created for infrastructure provisioning.\n"
                 f"Resource Group : {rg}\n"
-                f"Completed at   : {stamp}"
-                f"{pr_info}"
+                f"PR URL         : {pr_url}\n"
+                f"Created at     : {stamp}\n"
+                f"Awaiting infra team review and merge."
             ),
             "comments": (
-                f"Great news! Your Azure infrastructure has been provisioned successfully.\n\n"
+                f"Your infrastructure request is progressing!\n\n"
+                f"A Pull Request has been raised in the azure-infrastructure repository:\n"
+                f"  PR: {pr_url}\n\n"
+                f"Resource Group: {rg}\n\n"
+                f"What happens next:\n"
+                f"  - The Infrastructure team will review and approve the PR\n"
+                f"  - Once merged, Terraform will automatically provision your resources\n"
+                f"  - This ticket will be updated with resource details upon completion\n\n"
+                f"Please reach out to the Infrastructure team for PR approval.\n"
+                f"Contact: platformsupport@nexturn.com"
+            ),
+        }
+
+    if mode == "deploy_success":
+        return {
+            "state": "3",  # Closed Complete
+            "close_notes": f"Infrastructure deployed successfully: {rg}",
+            "work_notes": (
+                f"Terraform apply completed successfully.\n"
                 f"Resource Group : {rg}\n"
-                f"{'Pull Request   : ' + pr_url + chr(10) if pr_url else ''}"
-                f"\nWhat happens next:\n"
-                f"  - A Pull Request has been raised in the azure-infrastructure repository\n"
-                f"  - Once the PR is merged, Terraform will apply the infrastructure\n"
-                f"  - Your resources will be live within minutes of merge\n\n"
-                f"Refer to the Actions tab in GitHub for workflow runs.\n"
+                f"Deployed at    : {stamp}\n"
+                f"All resources are now live."
+            ),
+            "comments": (
+                f"Great news! Your Azure infrastructure has been deployed successfully.\n\n"
+                f"Resource Group : {rg}\n"
+                f"Deployed at    : {stamp}\n\n"
+                f"Your resources are now live and ready to use.\n"
+                f"Refer to the Azure Portal for resource details.\n"
                 f"Contact us at platformsupport@nexturn.com in case of any issues."
+            ),
+        }
+
+    if mode == "deploy_failed":
+        return {
+            "state": "2",  # Work in Progress
+            "work_notes": (
+                f"Terraform apply FAILED for resource group: {rg}\n"
+                f"Failed at: {stamp}\n"
+                f"Action required: Infrastructure team investigation needed."
+            ),
+            "comments": (
+                f"Unfortunately, the infrastructure deployment has failed for resource group: {rg}\n\n"
+                f"The Infrastructure team has been notified and will investigate.\n"
+                f"Please contact: platformsupport@nexturn.com\n\n"
+                f"You do not need to raise a separate ticket."
             ),
         }
 
@@ -100,8 +142,9 @@ def build_payload(mode: str) -> dict:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Update ServiceNow RITM for Azure infra")
-    parser.add_argument("--mode", choices=["success", "failed"], required=True)
+    parser = argparse.ArgumentParser(
+        description="Update ServiceNow RITM for Azure infra")
+    parser.add_argument("--mode", choices=["pr_created", "deploy_success", "deploy_failed", "failed"], required=True)
     args = parser.parse_args()
 
     base_url = get_env("SNOW_INSTANCE_URL")

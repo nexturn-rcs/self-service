@@ -56,11 +56,9 @@ permissions:
 
 jobs:
   create-resource-group:
-
     runs-on: ubuntu-latest
 
     steps:
-
       #####################################################################
       # Resolve inputs from either dispatch trigger or manual form
       #####################################################################
@@ -253,7 +251,7 @@ jobs:
         if: ${{ steps.inputs.outputs.snow_ritm_number != '' || steps.inputs.outputs.snow_ritm_sys_id != '' }}
         run: pip install requests
 
-      - name: ServiceNow - Mark Success And Close Ticket
+      - name: ServiceNow - Update Ticket With PR Details
         if: ${{ success() && (steps.inputs.outputs.snow_ritm_number != '' || steps.inputs.outputs.snow_ritm_sys_id != '') }}
         env:
           SNOW_INSTANCE_URL: ${{ secrets.SNOW_INSTANCE_URL }}
@@ -265,7 +263,7 @@ jobs:
           RESOURCE_GROUP: ${{ env.RESOURCE_GROUP }}
           PR_URL: ${{ steps.create-pr.outputs.pull-request-url }}
         run: |
-          python idp/scripts/update_snow_azure.py --mode success
+          python idp/scripts/update_snow_azure.py --mode pr_created
 
       - name: ServiceNow - Mark Failed
         if: ${{ failure() && (steps.inputs.outputs.snow_ritm_number != '' || steps.inputs.outputs.snow_ritm_sys_id != '') }}
