@@ -86,6 +86,10 @@ def build_payload(mode: str) -> dict:
         }
 
     if mode == "deploy_success":
+        resource_details = get_env("RESOURCE_DETAILS", required=False) or ""
+        resources_section = ""
+        if resource_details:
+            resources_section = f"\nProvisioned Resources:\n{resource_details}\n"
         return {
             "state": "3",  # Closed Complete
             "close_notes": f"Infrastructure deployed successfully: {rg}",
@@ -93,12 +97,14 @@ def build_payload(mode: str) -> dict:
                 f"Terraform apply completed successfully.\n"
                 f"Resource Group : {rg}\n"
                 f"Deployed at    : {stamp}\n"
+                f"{resources_section}"
                 f"All resources are now live."
             ),
             "comments": (
                 f"Great news! Your Azure infrastructure has been deployed successfully.\n\n"
                 f"Resource Group : {rg}\n"
-                f"Deployed at    : {stamp}\n\n"
+                f"Deployed at    : {stamp}\n"
+                f"{resources_section}"
                 f"Your resources are now live and ready to use.\n"
                 f"Refer to the Azure Portal for resource details.\n"
                 f"Contact us at platformsupport@nexturn.com in case of any issues."
