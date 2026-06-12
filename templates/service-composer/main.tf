@@ -3,6 +3,7 @@ module "rg" {
 
   name     = var.resource_group
   location = var.location
+  ticket   = var.ticket
   environment  = var.environment
 }
 
@@ -14,6 +15,7 @@ module "aks" {
   cluster_name   = "${var.project_name}-${var.environment}-aks"
   resource_group = module.rg.name
   location       = var.location
+  ticket         = var.ticket
 
   environment  = var.environment
   cluster_size = "small"
@@ -27,6 +29,7 @@ module "storage" {
   name                = "${var.project_name}${var.environment}"
   resource_group_name = module.rg.name
   location            = var.location
+  ticket              = var.ticket
   environment         = var.environment
 }
 
@@ -40,6 +43,7 @@ module "sql" {
 
   resource_group_name = module.rg.name
   location            = var.location
+  ticket              = var.ticket
   environment = var.environment
 }
 
@@ -51,6 +55,7 @@ module "kv" {
   name                = "${var.project_name}-${var.environment}-kv"
   resource_group_name = module.rg.name
   location            = var.location
+  ticket              = var.ticket
   environment         = var.environment
 }
 

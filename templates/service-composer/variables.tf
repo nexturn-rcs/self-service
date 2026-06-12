@@ -7,3 +7,4 @@ variable "enable_aks" {}
 variable "enable_storage" {}
 variable "enable_sql" {}
 variable "enable_key_vault" {}
+variable "ticket" {}

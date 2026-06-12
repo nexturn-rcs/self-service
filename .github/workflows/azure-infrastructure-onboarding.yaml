@@ -108,6 +108,7 @@ jobs:
         id: vars
         shell: bash
         run: |
+          echo "TICKET=${{ steps.inputs.outputs.ticket }}" >> "$GITHUB_ENV"
           echo "PROJECT_NAME=${{ steps.inputs.outputs.project }}" >> "$GITHUB_ENV"
           echo "ENVIRONMENT=${{ steps.inputs.outputs.environment }}" >> "$GITHUB_ENV"
           echo "LOCATION=${{ steps.inputs.outputs.location }}" >> "$GITHUB_ENV"
@@ -206,7 +207,7 @@ jobs:
           path: azure-infra
           branch: feature/${{ steps.inputs.outputs.ticket }}
           base: develop
-          delete-branch: false
+          delete-branch: true
           commit-message: |
             ${{ steps.inputs.outputs.ticket }}: Add ${{
             env.RESOURCE_GROUP }}
