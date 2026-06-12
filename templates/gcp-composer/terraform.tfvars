@@ -1,0 +1,8 @@
+project_name          = "${PROJECT_NAME}"
+environment           = "${ENVIRONMENT}"
+region                = "${REGION}"
+gcp_project_id        = "${GCP_PROJECT_ID}"
+enable_gke            = "${ENABLE_GKE}"
+enable_storage        = "${ENABLE_STORAGE}"
+enable_sql            = "${ENABLE_SQL}"
+enable_secret_manager = "${ENABLE_SECRET_MANAGER}"
