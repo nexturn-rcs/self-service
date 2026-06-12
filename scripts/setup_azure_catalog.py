@@ -29,7 +29,7 @@ from requests.auth import HTTPBasicAuth
 GITHUB_ORG = "nexturn-rcs"
 GITHUB_REPO = "self-service"
 GITHUB_WORKFLOW = "azure-infrastructure-onboarding.yaml"
-GITHUB_BRANCH = "main"
+GITHUB_BRANCH = "develop"
 
 # ── Catalog variables definition ────────────────────────────────────────────
 #   ServiceNow item_option_new types:
