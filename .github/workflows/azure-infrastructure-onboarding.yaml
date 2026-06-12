@@ -1,15 +1,18 @@
 name: Service Composer
 
 on:
+  repository_dispatch:
+    types: [servicenow-azure-infra-request]
+
   workflow_dispatch:
     inputs:
       ticket:
-        description: Ticket Number (e.g. OTIS-123)
+        description: Ticket Number (e.g. OTIS-123 or RITM number)
         required: true
         type: string
 
       project:
-        description: Project Name
+        description: Project Name (must start with nextops)
         required: true
         type: string
 
@@ -56,19 +59,65 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    env:
-      PROJECT_NAME: ${{ inputs.project }}
-      ENVIRONMENT: ${{ inputs.environment }}
-      LOCATION: ${{ inputs.location }}
-
-      ENABLE_AKS: ${{ inputs.enable_aks }}
-      ENABLE_STORAGE: ${{ inputs.enable_storage }}
-      ENABLE_SQL: ${{ inputs.enable_sql }}
-      ENABLE_KEYVAULT: ${{ inputs.enable_keyvault }}
-
-      RESOURCE_GROUP: rg-${{ inputs.project }}-${{ inputs.environment }}
-
     steps:
+
+      #####################################################################
+      # Resolve inputs from either dispatch trigger or manual form
+      #####################################################################
+
+      - name: Resolve Inputs
+        id: inputs
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            echo "ticket=${{ github.event.client_payload.snow_ritm_number }}" >> "$GITHUB_OUTPUT"
+            echo "project=${{ github.event.client_payload.project_name }}" >> "$GITHUB_OUTPUT"
+            echo "environment=${{ github.event.client_payload.environment }}" >> "$GITHUB_OUTPUT"
+            echo "location=${{ github.event.client_payload.location }}" >> "$GITHUB_OUTPUT"
+            echo "enable_aks=${{ github.event.client_payload.enable_aks }}" >> "$GITHUB_OUTPUT"
+            echo "enable_storage=${{ github.event.client_payload.enable_storage }}" >> "$GITHUB_OUTPUT"
+            echo "enable_sql=${{ github.event.client_payload.enable_sql }}" >> "$GITHUB_OUTPUT"
+            echo "enable_keyvault=${{ github.event.client_payload.enable_keyvault }}" >> "$GITHUB_OUTPUT"
+            echo "snow_ritm_number=${{ github.event.client_payload.snow_ritm_number }}" >> "$GITHUB_OUTPUT"
+            echo "snow_ritm_sys_id=${{ github.event.client_payload.snow_ritm_sys_id }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "ticket=${{ inputs.ticket }}" >> "$GITHUB_OUTPUT"
+            echo "project=${{ inputs.project }}" >> "$GITHUB_OUTPUT"
+            echo "environment=${{ inputs.environment }}" >> "$GITHUB_OUTPUT"
+            echo "location=${{ inputs.location }}" >> "$GITHUB_OUTPUT"
+            echo "enable_aks=${{ inputs.enable_aks }}" >> "$GITHUB_OUTPUT"
+            echo "enable_storage=${{ inputs.enable_storage }}" >> "$GITHUB_OUTPUT"
+            echo "enable_sql=${{ inputs.enable_sql }}" >> "$GITHUB_OUTPUT"
+            echo "enable_keyvault=${{ inputs.enable_keyvault }}" >> "$GITHUB_OUTPUT"
+            echo "snow_ritm_number=${{ inputs.ticket }}" >> "$GITHUB_OUTPUT"
+            echo "snow_ritm_sys_id=" >> "$GITHUB_OUTPUT"
+          fi
+
+      #####################################################################
+      # Validate project name
+      #####################################################################
+
+      - name: Validate Project Name
+        shell: bash
+        run: |
+          PROJECT="${{ steps.inputs.outputs.project }}"
+          if [[ "$PROJECT" != nextops* ]]; then
+            echo "::error::Project name must start with 'nextops'. Got: $PROJECT"
+            exit 1
+          fi
+
+      - name: Set Environment Variables
+        id: vars
+        shell: bash
+        run: |
+          echo "PROJECT_NAME=${{ steps.inputs.outputs.project }}" >> "$GITHUB_ENV"
+          echo "ENVIRONMENT=${{ steps.inputs.outputs.environment }}" >> "$GITHUB_ENV"
+          echo "LOCATION=${{ steps.inputs.outputs.location }}" >> "$GITHUB_ENV"
+          echo "ENABLE_AKS=${{ steps.inputs.outputs.enable_aks }}" >> "$GITHUB_ENV"
+          echo "ENABLE_STORAGE=${{ steps.inputs.outputs.enable_storage }}" >> "$GITHUB_ENV"
+          echo "ENABLE_SQL=${{ steps.inputs.outputs.enable_sql }}" >> "$GITHUB_ENV"
+          echo "ENABLE_KEYVAULT=${{ steps.inputs.outputs.enable_keyvault }}" >> "$GITHUB_ENV"
+          echo "RESOURCE_GROUP=rg-${{ steps.inputs.outputs.project }}-${{ steps.inputs.outputs.environment }}" >> "$GITHUB_ENV"
 
       #####################################################################
       # Checkout current repo (contains templates/service-composer)
@@ -152,35 +201,36 @@ jobs:
       #####################################################################
 
       - name: Create Pull Request
+        id: create-pr
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.PLATFORM_AUTOMATION_TOKEN }}
           path: azure-infra
-          branch: feature/${{ inputs.ticket }}
+          branch: feature/${{ steps.inputs.outputs.ticket }}
           base: develop
           delete-branch: false
           commit-message: |
-            ${{ inputs.ticket }}: Add ${{
+            ${{ steps.inputs.outputs.ticket }}: Add ${{
             env.RESOURCE_GROUP }}
           title: |
-            ${{ inputs.ticket }}: Add ${{
+            ${{ steps.inputs.outputs.ticket }}: Add ${{
             env.RESOURCE_GROUP }}
           body: |
             ## Resource Group Provisioning Request
             ### Project
-            Project Name: ${{ inputs.project }}
-            Environment: ${{ inputs.environment }}
-            Location: ${{ inputs.location }}
+            Project Name: ${{ steps.inputs.outputs.project }}
+            Environment: ${{ steps.inputs.outputs.environment }}
+            Location: ${{ steps.inputs.outputs.location }}
             Resource Group:
             `${{ env.RESOURCE_GROUP }}`
             ### Enabled Services
 
             | Service | Enabled |
             |----------|----------|
-            | AKS | ${{ inputs.enable_aks }} |
-            | Storage | ${{ inputs.enable_storage }} |
-            | SQL | ${{ inputs.enable_sql }} |
-            | KeyVault | ${{ inputs.enable_keyvault }} |
+            | AKS | ${{ steps.inputs.outputs.enable_aks }} |
+            | Storage | ${{ steps.inputs.outputs.enable_storage }} |
+            | SQL | ${{ steps.inputs.outputs.enable_sql }} |
+            | KeyVault | ${{ steps.inputs.outputs.enable_keyvault }} |
 
             Generated automatically by Platform Team.
 
@@ -188,3 +238,43 @@ jobs:
             automation
             infrastructure
             service-composer
+
+      #####################################################################
+      # ServiceNow ticket updates
+      #####################################################################
+
+      - name: Setup Python
+        if: ${{ steps.inputs.outputs.snow_ritm_number != '' || steps.inputs.outputs.snow_ritm_sys_id != '' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install Script Dependencies
+        if: ${{ steps.inputs.outputs.snow_ritm_number != '' || steps.inputs.outputs.snow_ritm_sys_id != '' }}
+        run: pip install requests
+
+      - name: ServiceNow - Mark Success And Close Ticket
+        if: ${{ success() && (steps.inputs.outputs.snow_ritm_number != '' || steps.inputs.outputs.snow_ritm_sys_id != '') }}
+        env:
+          SNOW_INSTANCE_URL: ${{ secrets.SNOW_INSTANCE_URL }}
+          SNOW_USERNAME: ${{ secrets.SNOW_USERNAME }}
+          SNOW_PASSWORD: ${{ secrets.SNOW_PASSWORD }}
+          RITM_NUMBER: ${{ steps.inputs.outputs.snow_ritm_number }}
+          RITM_SYS_ID: ${{ steps.inputs.outputs.snow_ritm_sys_id }}
+          REPO_NAME: ${{ steps.inputs.outputs.project }}
+          RESOURCE_GROUP: ${{ env.RESOURCE_GROUP }}
+          PR_URL: ${{ steps.create-pr.outputs.pull-request-url }}
+        run: |
+          python idp/scripts/update_snow_azure.py --mode success
+
+      - name: ServiceNow - Mark Failed
+        if: ${{ failure() && (steps.inputs.outputs.snow_ritm_number != '' || steps.inputs.outputs.snow_ritm_sys_id != '') }}
+        env:
+          SNOW_INSTANCE_URL: ${{ secrets.SNOW_INSTANCE_URL }}
+          SNOW_USERNAME: ${{ secrets.SNOW_USERNAME }}
+          SNOW_PASSWORD: ${{ secrets.SNOW_PASSWORD }}
+          RITM_NUMBER: ${{ steps.inputs.outputs.snow_ritm_number }}
+          RITM_SYS_ID: ${{ steps.inputs.outputs.snow_ritm_sys_id }}
+          REPO_NAME: ${{ steps.inputs.outputs.project }}
+        run: |
+          python idp/scripts/update_snow_azure.py --mode failed

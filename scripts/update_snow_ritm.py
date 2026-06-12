@@ -42,7 +42,8 @@ def resolve_ritm_sys_id(base_url: str, auth: HTTPBasicAuth, ritm_sys_id: str, ri
 
 
 def patch_ritm(base_url: str, auth: HTTPBasicAuth, ritm_sys_id: str, payload: dict) -> None:
-    headers = {"Content-Type": "application/json", "Accept": "application/json"}
+    headers = {"Content-Type": "application/json",
+               "Accept": "application/json"}
     url = f"{base_url}/api/now/table/sc_req_item/{ritm_sys_id}"
 
     # Separate journal fields from state fields â€” ServiceNow sometimes
@@ -57,12 +58,14 @@ def patch_ritm(base_url: str, auth: HTTPBasicAuth, ritm_sys_id: str, payload: di
 
     # First: update state
     if state_fields:
-        resp = requests.patch(url, auth=auth, headers=headers, json=state_fields, timeout=30)
+        resp = requests.patch(url, auth=auth, headers=headers,
+                              json=state_fields, timeout=30)
         resp.raise_for_status()
 
     # Second: write comments/work_notes
     if journal_fields:
-        resp = requests.patch(url, auth=auth, headers=headers, json=journal_fields, timeout=30)
+        resp = requests.patch(url, auth=auth, headers=headers,
+                              json=journal_fields, timeout=30)
         resp.raise_for_status()
 
 
