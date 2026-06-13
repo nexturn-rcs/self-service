@@ -89,7 +89,8 @@ class SnowSetup:
     def __init__(self, base_url: str, username: str, password: str):
         self.base_url = base_url.rstrip("/")
         self.auth = HTTPBasicAuth(username, password)
-        self.headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        self.headers = {"Content-Type": "application/json",
+                        "Accept": "application/json"}
 
     # ── Helpers ─────────────────────────────────────────────────────────────
 
@@ -252,7 +253,8 @@ function onChange(control, oldValue, newValue, isLoading) {{
         """Ensure GitHubIntegration script include exists."""
         existing = self._get("sys_script_include", "name=GitHubIntegration")
         if existing:
-            print(f"  Exists   Script Include 'GitHubIntegration': {existing['sys_id']}")
+            print(
+                f"  Exists   Script Include 'GitHubIntegration': {existing['sys_id']}")
         else:
             script = (
                 "var GitHubIntegration = Class.create();\n"
@@ -303,6 +305,9 @@ function onChange(control, oldValue, newValue, isLoading) {{
 (function executeRule(current, previous) {{
 
     if (current.cat_item.toString() !== '{item_id}') return;
+
+    // Only fire when approval CHANGES TO approved, not on re-updates
+    if (previous && previous.approval.toString() === 'approved') return;
 
     // Extract variables
     var requestType = current.variables.request_type.toString();
@@ -373,7 +378,8 @@ function onChange(control, oldValue, newValue, isLoading) {{
             group_id = self._upsert(
                 "sys_user_group",
                 "name=Platform Approvers",
-                {"name": "Platform Approvers", "description": "Approves self-service platform requests"},
+                {"name": "Platform Approvers",
+                    "description": "Approves self-service platform requests"},
                 "Group 'Platform Approvers'",
             )
 
@@ -491,9 +497,12 @@ function onChange(control, oldValue, newValue, isLoading) {{
         print("  Setup Complete!")
         print("=" * 60)
         print(f"\nCatalog URL  : {self.base_url}/sp?id=sc_home")
-        print(f"Catalog Item : {self.base_url}/sp?id=sc_cat_item&sys_id={item_id}")
-        print(f"\nGitHub Repo  : https://github.com/{GITHUB_ORG}/{GITHUB_REPO}")
-        print(f"Workflow     : adgroup-onboarding.yaml (branch: {GITHUB_BRANCH})")
+        print(
+            f"Catalog Item : {self.base_url}/sp?id=sc_cat_item&sys_id={item_id}")
+        print(
+            f"\nGitHub Repo  : https://github.com/{GITHUB_ORG}/{GITHUB_REPO}")
+        print(
+            f"Workflow     : adgroup-onboarding.yaml (branch: {GITHUB_BRANCH})")
         print(f"\nFields:")
         print(f"  - Request Type: New / Existing")
         print(f"  - Group Name")
@@ -503,10 +512,14 @@ function onChange(control, oldValue, newValue, isLoading) {{
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Setup AD Group Request catalog in ServiceNow")
-    parser.add_argument("--snow-url", required=True, help="ServiceNow instance URL")
-    parser.add_argument("--snow-user", required=True, help="ServiceNow admin username")
-    parser.add_argument("--snow-pass", required=True, help="ServiceNow admin password")
+    parser = argparse.ArgumentParser(
+        description="Setup AD Group Request catalog in ServiceNow")
+    parser.add_argument("--snow-url", required=True,
+                        help="ServiceNow instance URL")
+    parser.add_argument("--snow-user", required=True,
+                        help="ServiceNow admin username")
+    parser.add_argument("--snow-pass", required=True,
+                        help="ServiceNow admin password")
     parser.add_argument("--github-pat", required=True, help="GitHub PAT token")
     args = parser.parse_args()
 
