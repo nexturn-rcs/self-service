@@ -102,9 +102,9 @@ jobs:
       - name: Manage Azure AD Group
         id: adgroup
         env:
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.GLOBAL_AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.GLOBAL_AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.GLOBAL_AZURE_CLIENT_SECRET }}
           REQUEST_TYPE: ${{ steps.inputs.outputs.request_type }}
           GROUP_NAME: ${{ steps.inputs.outputs.group_name }}
           GROUP_DESCRIPTION: ${{ steps.inputs.outputs.group_description }}
