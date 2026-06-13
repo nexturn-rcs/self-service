@@ -1,0 +1,145 @@
+name: AD Group Onboarding
+
+on:
+  repository_dispatch:
+    types: [servicenow-adgroup-request]
+
+  workflow_dispatch:
+    inputs:
+      ticket:
+        description: Ticket Number (e.g. RITM number)
+        required: true
+        type: string
+
+      request_type:
+        description: Request Type
+        required: true
+        type: choice
+        options:
+          - new
+          - existing
+
+      group_name:
+        description: Group Name
+        required: true
+        type: string
+
+      group_description:
+        description: Group Description (for new groups)
+        required: false
+        type: string
+
+      user_email:
+        description: User Email (UPN) to add to group
+        required: true
+        type: string
+
+      business_justification:
+        description: Business Justification
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  manage-ad-group:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      #####################################################################
+      # Resolve inputs from either dispatch trigger or manual form
+      #####################################################################
+
+      - name: Resolve Inputs
+        id: inputs
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            echo "ticket=${{ github.event.client_payload.snow_ritm_number }}" >> "$GITHUB_OUTPUT"
+            echo "request_type=${{ github.event.client_payload.request_type }}" >> "$GITHUB_OUTPUT"
+            echo "group_name=${{ github.event.client_payload.group_name }}" >> "$GITHUB_OUTPUT"
+            echo "group_description=${{ github.event.client_payload.group_description }}" >> "$GITHUB_OUTPUT"
+            echo "user_email=${{ github.event.client_payload.user_email }}" >> "$GITHUB_OUTPUT"
+            echo "business_justification=${{ github.event.client_payload.business_justification }}" >> "$GITHUB_OUTPUT"
+            echo "snow_ritm_number=${{ github.event.client_payload.snow_ritm_number }}" >> "$GITHUB_OUTPUT"
+            echo "snow_ritm_sys_id=${{ github.event.client_payload.snow_ritm_sys_id }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "ticket=${{ inputs.ticket }}" >> "$GITHUB_OUTPUT"
+            echo "request_type=${{ inputs.request_type }}" >> "$GITHUB_OUTPUT"
+            echo "group_name=${{ inputs.group_name }}" >> "$GITHUB_OUTPUT"
+            echo "group_description=${{ inputs.group_description }}" >> "$GITHUB_OUTPUT"
+            echo "user_email=${{ inputs.user_email }}" >> "$GITHUB_OUTPUT"
+            echo "business_justification=${{ inputs.business_justification }}" >> "$GITHUB_OUTPUT"
+            echo "snow_ritm_number=${{ inputs.ticket }}" >> "$GITHUB_OUTPUT"
+            echo "snow_ritm_sys_id=" >> "$GITHUB_OUTPUT"
+          fi
+
+      #####################################################################
+      # Checkout repository
+      #####################################################################
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      #####################################################################
+      # Setup Python
+      #####################################################################
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install Dependencies
+        run: pip install requests msal
+
+      #####################################################################
+      # Manage AD Group via Microsoft Graph API
+      #####################################################################
+
+      - name: Manage Azure AD Group
+        id: adgroup
+        env:
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          REQUEST_TYPE: ${{ steps.inputs.outputs.request_type }}
+          GROUP_NAME: ${{ steps.inputs.outputs.group_name }}
+          GROUP_DESCRIPTION: ${{ steps.inputs.outputs.group_description }}
+          USER_EMAIL: ${{ steps.inputs.outputs.user_email }}
+        run: |
+          python scripts/manage_adgroup.py
+
+      #####################################################################
+      # ServiceNow ticket updates
+      #####################################################################
+
+      - name: ServiceNow - Mark Success
+        if: success() && (steps.inputs.outputs.snow_ritm_number != '' || steps.inputs.outputs.snow_ritm_sys_id != '')
+        env:
+          SNOW_INSTANCE_URL: ${{ secrets.SNOW_INSTANCE_URL }}
+          SNOW_USERNAME: ${{ secrets.SNOW_USERNAME }}
+          SNOW_PASSWORD: ${{ secrets.SNOW_PASSWORD }}
+          RITM_NUMBER: ${{ steps.inputs.outputs.snow_ritm_number }}
+          RITM_SYS_ID: ${{ steps.inputs.outputs.snow_ritm_sys_id }}
+          REQUEST_TYPE: ${{ steps.inputs.outputs.request_type }}
+          GROUP_NAME: ${{ steps.inputs.outputs.group_name }}
+          USER_EMAIL: ${{ steps.inputs.outputs.user_email }}
+        run: |
+          python scripts/update_snow_adgroup.py --mode success
+
+      - name: ServiceNow - Mark Failed
+        if: failure() && (steps.inputs.outputs.snow_ritm_number != '' || steps.inputs.outputs.snow_ritm_sys_id != '')
+        env:
+          SNOW_INSTANCE_URL: ${{ secrets.SNOW_INSTANCE_URL }}
+          SNOW_USERNAME: ${{ secrets.SNOW_USERNAME }}
+          SNOW_PASSWORD: ${{ secrets.SNOW_PASSWORD }}
+          RITM_NUMBER: ${{ steps.inputs.outputs.snow_ritm_number }}
+          RITM_SYS_ID: ${{ steps.inputs.outputs.snow_ritm_sys_id }}
+          REQUEST_TYPE: ${{ steps.inputs.outputs.request_type }}
+          GROUP_NAME: ${{ steps.inputs.outputs.group_name }}
+          USER_EMAIL: ${{ steps.inputs.outputs.user_email }}
+        run: |
+          python scripts/update_snow_adgroup.py --mode failed
