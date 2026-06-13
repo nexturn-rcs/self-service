@@ -7,7 +7,7 @@ locals {
 
 # ── Network ─────────────────────────────────────────────────────────────────
 module "network" {
-  source = "git::https://github.com/nexturn-rcs/self-service.git//terraform-modules/gcp/network?ref=develop"
+  source = "git::https://github.com/nexturn-rcs/terraform-modules.git//gcp/network?ref=feature/gcp"
 
   project_id  = var.project_id
   vpc_name    = "${local.name_prefix}-vpc"
@@ -19,7 +19,7 @@ module "network" {
 # ── GKE Cluster ─────────────────────────────────────────────────────────────
 module "gke" {
   count  = var.enable_gke ? 1 : 0
-  source = "git::https://github.com/nexturn-rcs/self-service.git//terraform-modules/gcp/gke?ref=develop"
+  source = "git::https://github.com/nexturn-rcs/terraform-modules.git//gcp/gke?ref=feature/gcp"
 
   project_id   = var.project_id
   cluster_name = "${local.name_prefix}-gke"
@@ -33,7 +33,7 @@ module "gke" {
 # ── Cloud Storage Bucket ─────────────────────────────────────────────────────
 module "storage_bucket" {
   count  = var.enable_storage ? 1 : 0
-  source = "git::https://github.com/nexturn-rcs/self-service.git//terraform-modules/gcp/gcs?ref=develop"
+  source = "git::https://github.com/nexturn-rcs/terraform-modules.git//gcp/gcs?ref=feature/gcp"
 
   project_id    = var.project_id
   bucket_name   = "${local.name_prefix}-bucket"
@@ -44,7 +44,7 @@ module "storage_bucket" {
 # ── Cloud KMS ────────────────────────────────────────────────────────────────
 module "kms" {
   count  = var.enable_kms ? 1 : 0
-  source = "git::https://github.com/nexturn-rcs/self-service.git//terraform-modules/gcp/secret-manager?ref=develop"
+  source = "git::https://github.com/nexturn-rcs/terraform-modules.git//gcp/secret-manager?ref=feature/gcp"
 
   project_id      = var.project_id
   location        = local.region
