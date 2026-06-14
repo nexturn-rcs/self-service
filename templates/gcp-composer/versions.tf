@@ -7,11 +7,6 @@ terraform {
       version = "~> 5.0"
     }
   }
-
-  backend "gcs" {
-    bucket = "${TF_STATE_BUCKET}"
-    prefix = "terraform/state/${PROJECT_NAME}/${ENVIRONMENT}"
-  }
 }
 
 provider "google" {
