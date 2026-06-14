@@ -1,0 +1,238 @@
+name: GCP Infrastructure Onboarding
+
+on:
+    repository_dispatch:
+        types: [servicenow-gcp-infra-request]
+
+    workflow_dispatch:
+        inputs:
+            ticket:
+                description: Ticket Number (RITM number)
+                required: true
+                type: string
+            project_name:
+                description: Project Name (must start with nextops)
+                required: true
+                type: string
+            gcp_project_id:
+                description: GCP Project ID
+                required: true
+                type: string
+            environment:
+                description: Environment
+                required: true
+                type: choice
+                options:
+                    - dev
+                    - stage
+                    - prod
+            region:
+                description: GCP Region
+                required: true
+                default: us-central1
+                type: string
+            enable_gke:
+                description: Enable GKE Cluster
+                required: true
+                type: boolean
+            enable_storage:
+                description: Enable Cloud Storage Bucket
+                required: true
+                type: boolean
+            enable_kms:
+                description: Enable Cloud KMS
+                required: true
+                type: boolean
+
+permissions:
+    contents: read
+
+jobs:
+    create-gcp-project:
+        runs-on: ubuntu-latest
+
+        steps:
+            #####################################################################
+            # Resolve inputs from either dispatch trigger or manual form
+            #####################################################################
+
+            - name: Resolve Inputs
+              id: inputs
+              shell: bash
+              run: |
+                  if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+                    echo "ticket=${{ github.event.client_payload.snow_ritm_number }}" >> "$GITHUB_OUTPUT"
+                    echo "project_name=${{ github.event.client_payload.project_name }}" >> "$GITHUB_OUTPUT"
+                    echo "gcp_project_id=${{ github.event.client_payload.gcp_project_id }}" >> "$GITHUB_OUTPUT"
+                    echo "environment=${{ github.event.client_payload.environment }}" >> "$GITHUB_OUTPUT"
+                    echo "region=${{ github.event.client_payload.region }}" >> "$GITHUB_OUTPUT"
+                    echo "enable_gke=${{ github.event.client_payload.enable_gke }}" >> "$GITHUB_OUTPUT"
+                    echo "enable_storage=${{ github.event.client_payload.enable_storage }}" >> "$GITHUB_OUTPUT"
+                    echo "enable_kms=${{ github.event.client_payload.enable_kms }}" >> "$GITHUB_OUTPUT"
+                    echo "snow_ritm_number=${{ github.event.client_payload.snow_ritm_number }}" >> "$GITHUB_OUTPUT"
+                    echo "snow_ritm_sys_id=${{ github.event.client_payload.snow_ritm_sys_id }}" >> "$GITHUB_OUTPUT"
+                  else
+                    echo "ticket=${{ inputs.ticket }}" >> "$GITHUB_OUTPUT"
+                    echo "project_name=${{ inputs.project_name }}" >> "$GITHUB_OUTPUT"
+                    echo "gcp_project_id=${{ inputs.gcp_project_id }}" >> "$GITHUB_OUTPUT"
+                    echo "environment=${{ inputs.environment }}" >> "$GITHUB_OUTPUT"
+                    echo "region=${{ inputs.region }}" >> "$GITHUB_OUTPUT"
+                    echo "enable_gke=${{ inputs.enable_gke }}" >> "$GITHUB_OUTPUT"
+                    echo "enable_storage=${{ inputs.enable_storage }}" >> "$GITHUB_OUTPUT"
+                    echo "enable_kms=${{ inputs.enable_kms }}" >> "$GITHUB_OUTPUT"
+                    echo "snow_ritm_number=${{ inputs.ticket }}" >> "$GITHUB_OUTPUT"
+                    echo "snow_ritm_sys_id=" >> "$GITHUB_OUTPUT"
+                  fi
+
+            #####################################################################
+            # Validate project name
+            #####################################################################
+
+            - name: Validate Project Name
+              shell: bash
+              run: |
+                  PROJECT="${{ steps.inputs.outputs.project_name }}"
+                  if [[ "$PROJECT" != nextops* ]]; then
+                    echo "::error::Project name must start with 'nextops'. Got: $PROJECT"
+                    exit 1
+                  fi
+
+            - name: Set Environment Variables
+              shell: bash
+              run: |
+                  echo "PROJECT_NAME=${{ steps.inputs.outputs.project_name }}" >> "$GITHUB_ENV"
+                  echo "GCP_PROJECT_ID=${{ steps.inputs.outputs.gcp_project_id }}" >> "$GITHUB_ENV"
+                  echo "ENVIRONMENT=${{ steps.inputs.outputs.environment }}" >> "$GITHUB_ENV"
+                  echo "REGION=${{ steps.inputs.outputs.region }}" >> "$GITHUB_ENV"
+                  echo "ENABLE_GKE=${{ steps.inputs.outputs.enable_gke }}" >> "$GITHUB_ENV"
+                  echo "ENABLE_STORAGE=${{ steps.inputs.outputs.enable_storage }}" >> "$GITHUB_ENV"
+                  echo "ENABLE_KMS=${{ steps.inputs.outputs.enable_kms }}" >> "$GITHUB_ENV"
+                  echo "PROJECT_FOLDER=${{ steps.inputs.outputs.project_name }}-${{ steps.inputs.outputs.environment }}" >> "$GITHUB_ENV"
+
+            #####################################################################
+            # Checkout repositories
+            #####################################################################
+
+            - name: Checkout IDP Repository
+              uses: actions/checkout@v4
+              with:
+                  path: idp
+
+            - name: Checkout GCP Infrastructure Repository
+              uses: actions/checkout@v4
+              with:
+                  repository: nexturn-rcs/gcp-infrastructure
+                  token: ${{ secrets.PLATFORM_AUTOMATION_TOKEN }}
+                  path: gcp-infra
+
+            #####################################################################
+            # Generate project folder from template
+            #####################################################################
+
+            - name: Install gettext
+              run: |
+                  sudo apt-get update -qq
+                  sudo apt-get install -y gettext-base
+
+            - name: Generate Project Files
+              run: |
+                  echo "Project Folder: ${PROJECT_FOLDER}"
+                  mkdir -p "gcp-infra/projects/${PROJECT_FOLDER}"
+                  cp -R idp/templates/gcp-composer/. "gcp-infra/projects/${PROJECT_FOLDER}/"
+
+            - name: Apply Template Variables
+              run: |
+                  find "gcp-infra/projects/${PROJECT_FOLDER}" -type f | while read -r file; do
+                    echo "Processing $file"
+                    envsubst < "$file" > "${file}.tmp"
+                    mv "${file}.tmp" "$file"
+                  done
+
+            - name: Show Generated Files
+              run: |
+                  find "gcp-infra/projects/${PROJECT_FOLDER}" -type f \
+                    -exec echo "==== {} ====" \; \
+                    -exec cat {} \;
+
+            #####################################################################
+            # Create PR in gcp-infrastructure repository
+            #####################################################################
+
+            - name: Create Pull Request
+              id: create-pr
+              uses: peter-evans/create-pull-request@v7
+              with:
+                  token: ${{ secrets.PLATFORM_AUTOMATION_TOKEN }}
+                  path: gcp-infra
+                  branch: feature/${{ steps.inputs.outputs.ticket }}
+                  base: develop
+                  delete-branch: false
+                  commit-message: |
+                      ${{ steps.inputs.outputs.ticket }}: Add ${{ env.PROJECT_FOLDER }}
+                  title: |
+                      ${{ steps.inputs.outputs.ticket }}: Add ${{ env.PROJECT_FOLDER }}
+                  body: |
+                      ## GCP Infrastructure Provisioning Request
+
+                      ### Project
+                      Project Name   : ${{ steps.inputs.outputs.project_name }}
+                      GCP Project ID : ${{ steps.inputs.outputs.gcp_project_id }}
+                      Environment    : ${{ steps.inputs.outputs.environment }}
+                      Region         : ${{ steps.inputs.outputs.region }}
+                      Folder         : `${{ env.PROJECT_FOLDER }}`
+
+                      ### Enabled Services
+
+                      | Service | Enabled |
+                      |---------|---------|
+                      | GKE Cluster | ${{ steps.inputs.outputs.enable_gke }} |
+                      | Cloud Storage | ${{ steps.inputs.outputs.enable_storage }} |
+                      | Cloud KMS | ${{ steps.inputs.outputs.enable_kms }} |
+
+                      Generated automatically by Platform Team.
+
+                  labels: |
+                      automation
+                      infrastructure
+                      gcp
+
+            #####################################################################
+            # ServiceNow ticket updates
+            #####################################################################
+
+            - name: Setup Python
+              if: steps.inputs.outputs.snow_ritm_number != '' || steps.inputs.outputs.snow_ritm_sys_id != ''
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.10"
+
+            - name: Install Script Dependencies
+              if: steps.inputs.outputs.snow_ritm_number != '' || steps.inputs.outputs.snow_ritm_sys_id != ''
+              run: pip install requests
+
+            - name: ServiceNow - Update Ticket With PR Details
+              if: success() && (steps.inputs.outputs.snow_ritm_number != '' || steps.inputs.outputs.snow_ritm_sys_id != '')
+              env:
+                  SNOW_INSTANCE_URL: ${{ secrets.SNOW_INSTANCE_URL }}
+                  SNOW_USERNAME: ${{ secrets.SNOW_USERNAME }}
+                  SNOW_PASSWORD: ${{ secrets.SNOW_PASSWORD }}
+                  RITM_NUMBER: ${{ steps.inputs.outputs.snow_ritm_number }}
+                  RITM_SYS_ID: ${{ steps.inputs.outputs.snow_ritm_sys_id }}
+                  PROJECT_NAME: ${{ steps.inputs.outputs.project_name }}
+                  PROJECT_FOLDER: ${{ env.PROJECT_FOLDER }}
+                  PR_URL: ${{ steps.create-pr.outputs.pull-request-url }}
+              run: |
+                  python idp/scripts/update_snow_gcp.py --mode pr_created
+
+            - name: ServiceNow - Mark Failed
+              if: failure() && (steps.inputs.outputs.snow_ritm_number != '' || steps.inputs.outputs.snow_ritm_sys_id != '')
+              env:
+                  SNOW_INSTANCE_URL: ${{ secrets.SNOW_INSTANCE_URL }}
+                  SNOW_USERNAME: ${{ secrets.SNOW_USERNAME }}
+                  SNOW_PASSWORD: ${{ secrets.SNOW_PASSWORD }}
+                  RITM_NUMBER: ${{ steps.inputs.outputs.snow_ritm_number }}
+                  RITM_SYS_ID: ${{ steps.inputs.outputs.snow_ritm_sys_id }}
+                  PROJECT_NAME: ${{ steps.inputs.outputs.project_name }}
+                  PROJECT_FOLDER: ${{ env.PROJECT_FOLDER }}
+              run: |
+                  python idp/scripts/update_snow_gcp.py --mode failed
