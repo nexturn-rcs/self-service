@@ -1,7 +1,7 @@
 locals {
-  project_name = PROJECT_NAME
-  environment  = ENVIRONMENT
-  region       = REGION
+  project_name = "${PROJECT_NAME}"
+  environment  = "${ENVIRONMENT}"
+  region       = "${REGION}"
   name_prefix  = "${PROJECT_NAME}-${ENVIRONMENT}"
 }
 
