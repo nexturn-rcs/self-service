@@ -107,7 +107,8 @@ class SnowSetup:
     def __init__(self, base_url: str, username: str, password: str):
         self.base_url = base_url.rstrip("/")
         self.auth = HTTPBasicAuth(username, password)
-        self.headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        self.headers = {"Content-Type": "application/json",
+                        "Accept": "application/json"}
 
     def _get(self, table: str, query: str) -> Dict[str, Any] | None:
         resp = requests.get(
@@ -254,7 +255,8 @@ function onChange(control, oldValue, newValue, isLoading) {
     def create_script_include(self) -> None:
         existing = self._get("sys_script_include", "name=GitHubIntegration")
         if existing:
-            print(f"  Exists   Script Include 'GitHubIntegration': {existing['sys_id']}")
+            print(
+                f"  Exists   Script Include 'GitHubIntegration': {existing['sys_id']}")
 
     def create_business_rule(self, item_id: str) -> None:
         rule_script = (
@@ -437,13 +439,17 @@ function onChange(control, oldValue, newValue, isLoading) {
         print("  Setup Complete!")
         print("=" * 60)
         print(f"\nCatalog URL  : {self.base_url}/sp?id=sc_home")
-        print(f"Catalog Item : {self.base_url}/sp?id=sc_cat_item&sys_id={item_id}")
-        print(f"\nGitHub Repo  : https://github.com/{GITHUB_ORG}/{GITHUB_REPO}")
-        print(f"Workflow     : gcp-infrastructure-onboarding.yaml (branch: {GITHUB_BRANCH})")
+        print(
+            f"Catalog Item : {self.base_url}/sp?id=sc_cat_item&sys_id={item_id}")
+        print(
+            f"\nGitHub Repo  : https://github.com/{GITHUB_ORG}/{GITHUB_REPO}")
+        print(
+            f"Workflow     : gcp-infrastructure-onboarding.yaml (branch: {GITHUB_BRANCH})")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Setup GCP Infrastructure catalog in ServiceNow")
+    parser = argparse.ArgumentParser(
+        description="Setup GCP Infrastructure catalog in ServiceNow")
     parser.add_argument("--snow-url", required=True)
     parser.add_argument("--snow-user", required=True)
     parser.add_argument("--snow-pass", required=True)
