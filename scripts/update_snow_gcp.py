@@ -23,7 +23,8 @@ def resolve_ritm_sys_id(base_url: str, auth: HTTPBasicAuth, ritm_sys_id: str, ri
         f"{base_url}/api/now/table/sc_req_item",
         auth=auth,
         headers={"Accept": "application/json"},
-        params={"sysparm_query": f"number={ritm_number}", "sysparm_fields": "sys_id", "sysparm_limit": 1},
+        params={"sysparm_query": f"number={ritm_number}",
+                "sysparm_fields": "sys_id", "sysparm_limit": 1},
         timeout=30,
     )
     resp.raise_for_status()
@@ -34,14 +35,19 @@ def resolve_ritm_sys_id(base_url: str, auth: HTTPBasicAuth, ritm_sys_id: str, ri
 
 
 def patch_ritm(base_url: str, auth: HTTPBasicAuth, ritm_sys_id: str, payload: dict) -> None:
-    headers = {"Content-Type": "application/json", "Accept": "application/json"}
+    headers = {"Content-Type": "application/json",
+               "Accept": "application/json"}
     url = f"{base_url}/api/now/table/sc_req_item/{ritm_sys_id}"
-    journal = {k: v for k, v in payload.items() if k in ("comments", "work_notes")}
-    state = {k: v for k, v in payload.items() if k not in ("comments", "work_notes")}
+    journal = {k: v for k, v in payload.items() if k in (
+        "comments", "work_notes")}
+    state = {k: v for k, v in payload.items(
+    ) if k not in ("comments", "work_notes")}
     if state:
-        requests.patch(url, auth=auth, headers=headers, json=state, timeout=30).raise_for_status()
+        requests.patch(url, auth=auth, headers=headers,
+                       json=state, timeout=30).raise_for_status()
     if journal:
-        requests.patch(url, auth=auth, headers=headers, json=journal, timeout=30).raise_for_status()
+        requests.patch(url, auth=auth, headers=headers,
+                       json=journal, timeout=30).raise_for_status()
 
 
 def build_payload(mode: str) -> dict:
@@ -132,8 +138,10 @@ def build_payload(mode: str) -> dict:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Update ServiceNow RITM for GCP infra")
-    parser.add_argument("--mode", choices=["pr_created", "deploy_success", "deploy_failed", "failed"], required=True)
+    parser = argparse.ArgumentParser(
+        description="Update ServiceNow RITM for GCP infra")
+    parser.add_argument(
+        "--mode", choices=["pr_created", "deploy_success", "deploy_failed", "failed"], required=True)
     args = parser.parse_args()
 
     base_url = get_env("SNOW_INSTANCE_URL")
