@@ -86,22 +86,6 @@ jobs:
         run: |
           python bootstrap.py
 
-      - name: Push Initial Boilerplate Code to Develop Branch
-        env:
-          GH_TOKEN: ${{ secrets.PLATFORM_AUTOMATION_TOKEN }}
-          SERVICE_NAME: ${{ steps.inputs.outputs.service_name }}
-        run: |
-          cd workspace_repo
-          git init
-          git checkout -b develop
-          git config user.name "Platform Automation Bot"
-          git config user.email "platform-team@nexturn.com"
-          git add .
-          git commit -m "bootstrap: initial boilerplate generation from template"
-          git remote add origin "https://x-access-token:${{ secrets.PLATFORM_AUTOMATION_TOKEN }}@github.com/nexturn-rcs/${{ steps.inputs.outputs.service_name }}.git"
-          git push -u origin develop --force
-          gh repo edit "nexturn-rcs/${{ steps.inputs.outputs.service_name }}" --default-branch develop
-
       - name: Propagate Repository Configuration Details
         env:
           GH_TOKEN: ${{ secrets.PLATFORM_AUTOMATION_TOKEN }}
@@ -129,6 +113,22 @@ jobs:
           gh secret set AZURE_CLIENT_SECRET --body "$AZURE_CLIENT_SECRET" --repo "$REPO_SLUG"
           gh secret set AZURE_TENANT_ID --body "$AZURE_TENANT_ID" --repo "$REPO_SLUG"
           gh secret set AZURE_SUBSCRIPTION_ID --body "$AZURE_SUBSCRIPTION_ID" --repo "$REPO_SLUG"
+
+      - name: Push Initial Boilerplate Code to Develop Branch
+        env:
+          GH_TOKEN: ${{ secrets.PLATFORM_AUTOMATION_TOKEN }}
+          SERVICE_NAME: ${{ steps.inputs.outputs.service_name }}
+        run: |
+          cd workspace_repo
+          git init
+          git checkout -b develop
+          git config user.name "Platform Automation Bot"
+          git config user.email "platform-team@nexturn.com"
+          git add .
+          git commit -m "bootstrap: initial boilerplate generation from template"
+          git remote add origin "https://x-access-token:${{ secrets.PLATFORM_AUTOMATION_TOKEN }}@github.com/nexturn-rcs/${{ steps.inputs.outputs.service_name }}.git"
+          git push -u origin develop --force
+          gh repo edit "nexturn-rcs/${{ steps.inputs.outputs.service_name }}" --default-branch develop
 
       - name: ServiceNow - Mark Success And Close Ticket
         if: ${{ success() && (steps.inputs.outputs.snow_ritm_number != '' || steps.inputs.outputs.snow_ritm_sys_id != '') }}
