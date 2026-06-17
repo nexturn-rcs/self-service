@@ -110,10 +110,10 @@ jobs:
 
       - name: Determine Image Tag
         run: |
-          BRANCH="${GITHUB_REF_NAME}"
+          BRANCH="${{ github.event.workflow_run.head_branch }}"
       
-          if [[ "$BRANCH" =~ ^release/(.+)$ ]]; then
-            IMAGE_TAG="${BASH_REMATCH[1]}"
+          if [[ "$BRANCH" == release/* ]]; then
+            IMAGE_TAG="${BRANCH#release/}"
           else
             IMAGE_TAG="${GITHUB_SHA::7}"
           fi
