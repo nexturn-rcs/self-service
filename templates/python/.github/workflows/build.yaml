@@ -72,20 +72,18 @@ jobs:
       - name: Build Image
         run: |
           docker build \
-            -t ${{ vars.ACR_NAME }}.azurecr.io/${IMAGE_NAME}:${GITHUB_SHA} \
+            -t ${{ vars.ACR_NAME }}.azurecr.io/${IMAGE_NAME}:${GITHUB_SHA::7} \
             -t ${{ vars.ACR_NAME }}.azurecr.io/${IMAGE_NAME}:${{ steps.tag.outputs.tag }} \
             -t ${{ vars.ACR_NAME }}.azurecr.io/${IMAGE_NAME}:latest \
             .
 
       - name: Push Image
         run: |
-          docker push ${{ vars.ACR_NAME }}.azurecr.io/${IMAGE_NAME}:${GITHUB_SHA}
-
+          docker push ${{ vars.ACR_NAME }}.azurecr.io/${IMAGE_NAME}:${GITHUB_SHA::7}
           docker push ${{ vars.ACR_NAME }}.azurecr.io/${IMAGE_NAME}:${{ steps.tag.outputs.tag }}
-
           docker push ${{ vars.ACR_NAME }}.azurecr.io/${IMAGE_NAME}:latest
 
       - name: Build Summary
         run: |
           echo "Image pushed:"
-          echo "${{ vars.ACR_NAME }}.azurecr.io/${IMAGE_NAME}:${GITHUB_SHA}"
+          echo "${{ vars.ACR_NAME }}.azurecr.io/${IMAGE_NAME}:${GITHUB_SHA::7}"
