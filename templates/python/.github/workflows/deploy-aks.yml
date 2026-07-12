@@ -153,3 +153,25 @@ jobs:
           echo "Namespace   : $NS"
           echo "Image       : ${{ vars.ACR_NAME }}.azurecr.io/${{ github.event.repository.name }}:${{ github.event.workflow_run.head_sha }}"
           echo "=================================="
+
+      - name: Trigger Performance Test
+        if: ${{ vars.PERF_TEST_CONFIG_ID != '' }}
+        continue-on-error: true
+        run: |
+
+          CONFIG_ID="${{ vars.PERF_TEST_CONFIG_ID }}"
+          API_URL="${{ vars.PERF_TEST_API_URL }}"
+
+          if [[ -z "$API_URL" ]]; then
+            echo "PERF_TEST_API_URL variable not set — skipping perf test trigger"
+            exit 0
+          fi
+
+          echo "Triggering perf test config $CONFIG_ID at $API_URL"
+
+          HTTP_STATUS=$(curl -sf -o /dev/null -w "%{http_code}" \
+            -X POST "${API_URL}/v1/runs" \
+            -H "Content-Type: application/json" \
+            -d "{\"configId\":\"${CONFIG_ID}\"}")
+
+          echo "Perf test API responded with HTTP $HTTP_STATUS"
