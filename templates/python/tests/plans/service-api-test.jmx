@@ -20,10 +20,10 @@ Parameters (set via -J flags):
 
       <!-- Thread Group -->
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Load" enabled="true">
-        <intProp name="ThreadGroup.num_threads">${__P(users,10)}</intProp>
-        <intProp name="ThreadGroup.ramp_time">${__P(rampup,30)}</intProp>
+        <stringProp name="ThreadGroup.num_threads">${__P(users,10)}</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">${__P(rampup,30)}</stringProp>
         <boolProp name="ThreadGroup.scheduler">true</boolProp>
-        <longProp name="ThreadGroup.duration">${__P(duration,60)}</longProp>
+        <stringProp name="ThreadGroup.duration">${__P(duration,60)}</stringProp>
         <longProp name="ThreadGroup.delay">0</longProp>
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController"
@@ -39,7 +39,7 @@ Parameters (set via -J flags):
                            testname="HTTP Request Defaults" enabled="true">
           <stringProp name="HTTPSampler.protocol">${__P(target_protocol,https)}</stringProp>
           <stringProp name="HTTPSampler.domain">${__P(target_host,localhost)}</stringProp>
-          <intProp name="HTTPSampler.port">${__P(target_port,443)}</intProp>
+          <stringProp name="HTTPSampler.port">${__P(target_port,443)}</stringProp>
           <intProp name="HTTPSampler.connect_timeout">5000</intProp>
           <intProp name="HTTPSampler.response_timeout">30000</intProp>
           <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
