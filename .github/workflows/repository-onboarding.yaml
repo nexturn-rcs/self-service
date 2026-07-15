@@ -125,6 +125,7 @@ jobs:
           git config user.name "Platform Automation Bot"
           git config user.email "platform-team@nexturn.com"
           git push -u origin develop --force
+          sleep 10
           gh repo edit "nexturn-rcs/${{ steps.inputs.outputs.service_name }}" --default-branch develop
           git add .
           git commit -m "bootstrap: initial boilerplate generation from template"
