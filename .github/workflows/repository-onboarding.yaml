@@ -124,13 +124,16 @@ jobs:
           git checkout -b develop
           git config user.name "Platform Automation Bot"
           git config user.email "platform-team@nexturn.com"
-          git push -u origin develop --force
-          sleep 10
-          gh repo edit "nexturn-rcs/${{ steps.inputs.outputs.service_name }}" --default-branch develop
           git add .
           git commit -m "bootstrap: initial boilerplate generation from template"
           git remote add origin "https://x-access-token:${{ secrets.PLATFORM_AUTOMATION_TOKEN }}@github.com/nexturn-rcs/${{ steps.inputs.outputs.service_name }}.git"
           git push -u origin develop --force
+          gh repo edit "nexturn-rcs/${{ steps.inputs.outputs.service_name }}" --default-branch develop
+          # GitHub only indexes workflow_dispatch workflows from pushes to the default branch.
+          # The push above happened before develop became the default, so push an empty
+          # commit now to force re-indexing and make perf-test.yml appear in the Actions UI.
+          git commit --allow-empty -m "chore: trigger workflow indexing on default branch"
+          git push origin develop
 
       - name: ServiceNow - Mark Success And Close Ticket
         if: ${{ success() && (steps.inputs.outputs.snow_ritm_number != '' || steps.inputs.outputs.snow_ritm_sys_id != '') }}
