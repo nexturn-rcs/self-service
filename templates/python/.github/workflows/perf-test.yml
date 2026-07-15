@@ -216,6 +216,7 @@ jobs:
         run: mkdir -p results/html-report metrics-results
 
       - name: Run JMeter
+        id: jmeter
         run: |
           jmeter -n \
             -t tests/plans/service-api-test.jmx \
@@ -227,6 +228,7 @@ jobs:
             -Jduration="${{ inputs.duration_seconds }}" \
             -l results/results.jtl \
             -e -o results/html-report
+          echo "end=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
       - name: Upload jmeter-results
         uses: actions/upload-artifact@v4
@@ -236,12 +238,21 @@ jobs:
           path: results/
           retention-days: 30
 
+      # ── Wait for Prometheus to scrape post-test data ────────────────────────
+
+      - name: Wait for Prometheus scrape
+        if: steps.prometheus.outputs.PROM_FOUND == 'true'
+        run: |
+          echo "Waiting 3 minutes for Prometheus to scrape post-test metrics..."
+          sleep 180
+
       # ── Collect infrastructure metrics ──────────────────────────────────────
 
       - name: Collect infrastructure metrics
         if: always()
         env:
           WINDOW_START:      ${{ steps.url.outputs.start }}
+          WINDOW_END:        ${{ steps.jmeter.outputs.end }}
           SERVICE_NAMESPACE: ${{ steps.env_cfg.outputs.NS }}
           SERVICE_NAME:      ${{ github.event.repository.name }}
         run: |
@@ -249,7 +260,7 @@ jobs:
           bash scripts/collect-metrics.sh \
             --jtl     results/results.jtl \
             --start   "$WINDOW_START" \
-            --end     "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --end     "${WINDOW_END:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}" \
             --output  metrics-results/metrics-results.json
         continue-on-error: true
 

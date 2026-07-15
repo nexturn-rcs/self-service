@@ -52,6 +52,8 @@ def parse_iso(s):
 def to_iso(dt):
     return dt.strftime('%Y-%m-%dT%H:%M:%SZ')
 
+PROM_BUFFER_S = 30  # expand query window ±30s to catch scrapes at boundary
+
 try:
     start_dt = parse_iso(start_iso)
     end_dt   = parse_iso(end_iso)
@@ -59,10 +61,14 @@ except Exception:
     end_dt   = datetime.now(timezone.utc)
     start_dt = end_dt - timedelta(minutes=5)
 
-start_ts   = int(start_dt.timestamp())
-end_ts     = int(end_dt.timestamp())
-duration_s = max(end_ts - start_ts, 60)
+# JMeter window (for labels / duration calculation)
+duration_s = max(int(end_dt.timestamp()) - int(start_dt.timestamp()), 60)
 step       = max(15, duration_s // 60)
+
+# Prometheus query window: slightly wider than the JMeter run so scrapes
+# that fired just before or after the test boundaries are included
+start_ts = int(start_dt.timestamp()) - PROM_BUFFER_S
+end_ts   = int(end_dt.timestamp())   + PROM_BUFFER_S
 
 # ── Parse JTL ─────────────────────────────────────────────────────────────────
 
