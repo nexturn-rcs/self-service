@@ -1,6 +1,6 @@
 name: Performance Test
 
-'on':
+on:
   workflow_dispatch:
     inputs:
       deploy_env:
