@@ -14,7 +14,8 @@ def create_github_repo(org_name, repo_name, description, token):
         "private": True,
         "has_issues": True,
         "has_projects": False,
-        "has_wiki": False
+        "has_wiki": False,
+        "default_branch": "develop"
     }
 
     headers = {

@@ -132,8 +132,8 @@ jobs:
           # GitHub only indexes workflow_dispatch workflows from pushes to the default branch.
           # The push above happened before develop became the default, so push an empty
           # commit now to force re-indexing and make perf-test.yml appear in the Actions UI.
-          git commit --allow-empty -m "chore: trigger workflow indexing on default branch"
-          git push origin develop
+          #git commit --allow-empty -m "chore: trigger workflow indexing on default branch"
+          #git push origin develop
 
       - name: ServiceNow - Mark Success And Close Ticket
         if: ${{ success() && (steps.inputs.outputs.snow_ritm_number != '' || steps.inputs.outputs.snow_ritm_sys_id != '') }}
