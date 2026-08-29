@@ -104,3 +104,25 @@ The bootstrap.py engine relies on os.path.normpath() processing rules. This allo
 
 Secret Rotations
 To change the Azure credentials pushed down to new microservices, simply update the Environment Secrets (GLOBAL_AZURE_XYZ) inside the main self-service repository settings panel.
+---
+## NextOps Repository Onboarding
+
+> Branch: `nextops/onboarding-self-service-1788007597810` | Language: `python` | Cluster: `nextops-dev-aks` | Environment: `dev`
+
+### Compliance Status
+
+- Dockerfile: ✅ Found
+- Helm chart: ✅ Found
+- CI workflow: 🆕 Generated
+- CD workflow: 🆕 Generated
+- environments.yaml: 🆕 Generated
+
+### Generated Files
+
+- `.github/workflows/ci.yml`
+- `.github/workflows/cd.yml`
+- `environments.yaml`
+
+### Action Required
+
+Search for `TODO: UPDATE_REQUIRED` in the generated files and update each placeholder with your application-specific values.

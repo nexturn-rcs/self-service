@@ -1,0 +1,5 @@
+environments:
+  - name: dev
+    cluster: nextops-dev-aks
+    namespace: # TODO: UPDATE_REQUIRED — Set the Kubernetes namespace
+    ingressUrl: # TODO: UPDATE_REQUIRED — Set the public ingress URL for this environment
