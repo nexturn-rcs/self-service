@@ -1,0 +1,151 @@
+﻿name: Deploy ACA
+
+on:
+  workflow_run:
+    workflows:
+      - Build
+    types:
+      - completed
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  CONTAINER_PORT: 80
+
+jobs:
+
+  deploy:
+
+    if: ${{ github.event.workflow_run.conclusion == 'success' && vars.DEPLOY_TARGET == 'ACA' }}
+
+    runs-on: ubuntu-latest
+    environment: ${{ (github.event.workflow_run.head_branch == 'develop' || startsWith(github.event.workflow_run.head_branch, 'feature/')) && 'dev' || (startsWith(github.event.workflow_run.head_branch, 'release/') && 'stage' || 'prod') }}
+
+    steps:
+
+      - name: Checkout Build Commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Determine Environment
+        run: |
+
+          BRANCH="${{ github.event.workflow_run.head_branch }}"
+
+          echo "Branch: $BRANCH"
+
+          if [[ "$BRANCH" == feature/* ]]; then
+            ENV=dev
+
+          elif [[ "$BRANCH" == "develop" ]]; then
+            ENV=dev
+
+          elif [[ "$BRANCH" == release/* ]]; then
+            ENV=stage
+
+          elif [[ "$BRANCH" == "main" ]]; then
+            ENV=prod
+
+          else
+            echo "Unsupported branch"
+            exit 1
+          fi
+
+          echo "ENVIRONMENT=$ENV" >> $GITHUB_ENV
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq \
+            https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Resolve Deployment Configuration
+        run: |
+
+          RG=$(yq ".${ENVIRONMENT}.resourceGroup" deploy/environments.yaml)
+
+          ACA_ENV=$(yq ".${ENVIRONMENT}.acaEnvironment" deploy/environments.yaml)
+
+          APP_NAME="${{ github.event.repository.name }}"
+
+          echo "RG=$RG" >> $GITHUB_ENV
+          echo "ACA_ENV=$ACA_ENV" >> $GITHUB_ENV
+          echo "APP_NAME=$APP_NAME" >> $GITHUB_ENV
+
+          echo "Resource Group     : $RG"
+          echo "Container Apps Env : $ACA_ENV"
+          echo "App Name           : $APP_NAME"
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Install Container Apps Extension
+        run: |
+          az extension add --name containerapp --upgrade --yes
+
+      - name: Determine Image Tag
+        run: |
+          BRANCH="${{ github.event.workflow_run.head_branch }}"
+
+          if [[ "$BRANCH" == release/* ]]; then
+            IMAGE_TAG="${BRANCH#release/}"
+          else
+            IMAGE_TAG="${GITHUB_SHA::7}"
+          fi
+
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+          echo "IMAGE=${{ vars.ACR_NAME }}.azurecr.io/${APP_NAME}:$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: Fetch ACR Credentials
+        run: |
+          az acr update --name ${{ vars.ACR_NAME }} --admin-enabled true
+
+          ACR_USER=$(az acr credential show --name ${{ vars.ACR_NAME }} --query username -o tsv)
+          ACR_PASS=$(az acr credential show --name ${{ vars.ACR_NAME }} --query passwords[0].value -o tsv)
+
+          echo "::add-mask::$ACR_PASS"
+          echo "ACR_USERNAME=$ACR_USER" >> $GITHUB_ENV
+          echo "ACR_PASSWORD=$ACR_PASS" >> $GITHUB_ENV
+
+      - name: Deploy to Container Apps
+        run: |
+          if az containerapp show --name "$APP_NAME" --resource-group "$RG" &>/dev/null; then
+            echo "Updating existing Container App: $APP_NAME"
+            az containerapp update \
+              --name "$APP_NAME" \
+              --resource-group "$RG" \
+              --image "$IMAGE"
+          else
+            echo "Creating new Container App: $APP_NAME"
+            az containerapp create \
+              --name "$APP_NAME" \
+              --resource-group "$RG" \
+              --environment "$ACA_ENV" \
+              --image "$IMAGE" \
+              --target-port "$CONTAINER_PORT" \
+              --ingress external \
+              --registry-server "${{ vars.ACR_NAME }}.azurecr.io" \
+              --registry-username "$ACR_USERNAME" \
+              --registry-password "$ACR_PASSWORD"
+          fi
+
+      - name: Deployment Summary
+        run: |
+
+          echo "=================================="
+          echo "Deployment Successful"
+          echo "=================================="
+          echo "Environment : $ENVIRONMENT"
+          echo "RG          : $RG"
+          echo "ACA Env     : $ACA_ENV"
+          echo "App         : $APP_NAME"
+          echo "Image       : $IMAGE"
+          echo "=================================="
