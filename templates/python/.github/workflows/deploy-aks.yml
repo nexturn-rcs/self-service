@@ -123,21 +123,22 @@ jobs:
       
       - name: Helm Deploy
         run: |
+          APP_NAME=$(echo "${{ vars.PROJECT_NAME }}" | tr '[:upper:]' '[:lower:]')
           helm upgrade \
             --install \
-            "${{ github.event.repository.name }}" \
+            "${APP_NAME}" \
             ./deploy/helm \
             -f "$VALUES_FILE" \
             --namespace "$NS" \
             --create-namespace \
-            --set image.repository=${{ vars.ACR_NAME }}.azurecr.io/${{ github.event.repository.name }} \
+            --set image.repository=${{ vars.ACR_NAME }}.azurecr.io/${APP_NAME} \
             --set image.tag=$IMAGE_TAG
 
       - name: Verify Rollout
         run: |
 
           kubectl rollout status \
-            deployment/${{ github.event.repository.name }} \
+            deployment/${APP_NAME} \
             -n "$NS" \
             --timeout=300s
 
@@ -151,7 +152,7 @@ jobs:
           echo "RG          : $RG"
           echo "AKS         : $AKS"
           echo "Namespace   : $NS"
-          echo "Image       : ${{ vars.ACR_NAME }}.azurecr.io/${{ github.event.repository.name }}:${{ github.event.workflow_run.head_sha }}"
+          echo "Image       : ${{ vars.ACR_NAME }}.azurecr.io/${APP_NAME}:${IMAGE_TAG}"
           echo "=================================="
 
       - name: Trigger Performance Test
