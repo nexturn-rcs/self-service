@@ -1,0 +1,83 @@
+name: Existing Repository Onboarding
+
+# Dispatched exclusively by repo-onboarding-plugin-api to inject credentials
+# and configuration into an EXISTING repository during onboarding.
+#
+# This workflow is the counterpart to repository-onboarding.yaml (which creates
+# NEW repos). Both use the same org secrets so credential injection is identical
+# — only the scope differs: this one targets any pre-existing repo without
+# touching its code or branch structure.
+#
+# Required org secrets (nexturn-rcs):
+#   PLATFORM_AUTOMATION_TOKEN  — PAT with repo + secrets:write scope on target org
+#   GLOBAL_AZURE_CLIENT_ID
+#   GLOBAL_AZURE_CLIENT_SECRET
+#   GLOBAL_AZURE_TENANT_ID
+#   GLOBAL_AZURE_SUBSCRIPTION_ID
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_repo:
+        description: "Target repository in owner/repo format (e.g. nexturn-ops/Python-app-nextops)"
+        required: true
+        type: string
+      project_name:
+        description: "Value for PROJECT_NAME variable"
+        required: true
+        type: string
+      language:
+        description: "Language: python or node"
+        required: false
+        type: string
+        default: "python"
+      python_version:
+        description: "Runtime version — PYTHON_VER for python, NODE_VER for node"
+        required: false
+        type: string
+        default: "3.11"
+      acr_name:
+        description: "Azure Container Registry name for ACR_NAME variable"
+        required: false
+        type: string
+        default: "nextopsacrdemo"
+
+jobs:
+  onboard-existing-repo:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Propagate Global Cloud Infrastructure Secrets
+        env:
+          GH_TOKEN: ${{ secrets.PLATFORM_AUTOMATION_TOKEN }}
+          REPO_SLUG: ${{ inputs.target_repo }}
+          AZURE_CLIENT_ID: ${{ secrets.GLOBAL_AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.GLOBAL_AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.GLOBAL_AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.GLOBAL_AZURE_SUBSCRIPTION_ID }}
+        run: |
+          echo "Setting Azure secrets on $REPO_SLUG..."
+          AZURE_JSON_CREDS='{"clientId":"'"$AZURE_CLIENT_ID"'","clientSecret":"'"$AZURE_CLIENT_SECRET"'","subscriptionId":"'"$AZURE_SUBSCRIPTION_ID"'","tenantId":"'"$AZURE_TENANT_ID"'"}'
+          gh secret set AZURE_CREDENTIALS     --body "$AZURE_JSON_CREDS"      --repo "$REPO_SLUG"
+          gh secret set AZURE_CLIENT_ID       --body "$AZURE_CLIENT_ID"       --repo "$REPO_SLUG"
+          gh secret set AZURE_CLIENT_SECRET   --body "$AZURE_CLIENT_SECRET"   --repo "$REPO_SLUG"
+          gh secret set AZURE_TENANT_ID       --body "$AZURE_TENANT_ID"       --repo "$REPO_SLUG"
+          gh secret set AZURE_SUBSCRIPTION_ID --body "$AZURE_SUBSCRIPTION_ID" --repo "$REPO_SLUG"
+          echo "Azure secrets set."
+
+      - name: Propagate Repository Configuration Variables
+        env:
+          GH_TOKEN: ${{ secrets.PLATFORM_AUTOMATION_TOKEN }}
+          REPO_SLUG: ${{ inputs.target_repo }}
+        run: |
+          echo "Setting configuration variables on $REPO_SLUG..."
+          gh variable set PROJECT_NAME  --body "${{ inputs.project_name }}" --repo "$REPO_SLUG"
+          gh variable set ACR_NAME      --body "${{ inputs.acr_name }}"     --repo "$REPO_SLUG"
+          gh variable set DEPLOY_TARGET --body "AKS"                        --repo "$REPO_SLUG"
+
+          if [ "${{ inputs.language }}" = "node" ]; then
+            gh variable set NODE_VER   --body "${{ inputs.python_version }}" --repo "$REPO_SLUG"
+          else
+            gh variable set PYTHON_VER --body "${{ inputs.python_version }}" --repo "$REPO_SLUG"
+          fi
+          echo "Configuration variables set. Onboarding complete for $REPO_SLUG."
