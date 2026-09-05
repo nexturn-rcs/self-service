@@ -1,0 +1,107 @@
+openapi: 3.0.3
+
+info:
+  title: ${{ values.repoName }}
+  description: ${{ values.description }}
+  version: 1.0.0
+
+servers:
+  - url: https://${{ values.repoName }}.api.nexturn.com
+    description: Production
+
+  - url: https://${{ values.repoName }}.api-dev.nexturn.com
+    description: Development
+
+tags:
+  - name: Health
+    description: Health and readiness endpoints
+
+  - name: Information
+    description: Service metadata
+
+paths:
+
+  /:
+    get:
+      tags:
+        - Information
+      summary: Application home
+      operationId: getHome
+      responses:
+        "200":
+          description: Successful response
+
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Liveness probe
+      operationId: getHealth
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /ready:
+    get:
+      tags:
+        - Health
+      summary: Readiness probe
+      operationId: getReady
+      responses:
+        "200":
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadyResponse"
+
+  /info:
+    get:
+      tags:
+        - Information
+      summary: Service information
+      operationId: getInfo
+      responses:
+        "200":
+          description: Service information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InfoResponse"
+
+components:
+
+  schemas:
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: UP
+
+    ReadyResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: READY
+
+    InfoResponse:
+      type: object
+      properties:
+        service:
+          type: string
+          example: customer-api
+
+        environment:
+          type: string
+          example: dev
+
+        version:
+          type: string
+          example: "1.0.0"

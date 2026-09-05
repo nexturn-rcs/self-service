@@ -1,0 +1,28 @@
+replicaCount: 2
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 75
+
+ingress:
+  enabled: true
+
+env:
+  APP_ENV: stage
+
+config:
+  LOG_LEVEL: WARN
+
+secret:
+  DATABASE_PASSWORD: prod-password

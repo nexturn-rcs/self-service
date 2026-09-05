@@ -1,0 +1,14 @@
+dev:
+  resourceGroup: rg-${{ values.projectName }}-dev
+  aksCluster: ${{ values.projectName }}-dev-aks
+  namespace: ${{ values.projectName }}-dev
+
+stage:
+  resourceGroup: rg-${{ values.projectName }}-stage
+  aksCluster: ${{ values.projectName }}-stage-aks
+  namespace: ${{ values.projectName }}-stage
+
+prod:
+  resourceGroup: rg-${{ values.projectName }}-prod
+  aksCluster: ${{ values.projectName }}-prod-aks
+  namespace: ${{ values.projectName }}-prod

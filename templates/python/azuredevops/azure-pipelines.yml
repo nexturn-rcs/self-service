@@ -1,0 +1,49 @@
+trigger:
+  branches:
+    include:
+      - develop
+      - feature/*
+      - release/*
+
+variables:
+  ACR_NAME: ${{ values.acrName }}
+  IMAGE_NAME: ${{ values.repoName }}
+  PYTHON_VERSION: ${{ values.pythonVersion }}
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - task: UsePythonVersion@0
+    displayName: Set Python version
+    inputs:
+      versionSpec: $(PYTHON_VERSION)
+
+  - script: |
+      pip install -r requirements.txt
+      pytest tests/ --junitxml=test-results.xml
+    displayName: Install dependencies and run tests
+
+  - task: PublishTestResults@2
+    condition: always()
+    inputs:
+      testResultsFiles: test-results.xml
+      testRunTitle: Unit Tests
+
+  - task: AzureCLI@2
+    displayName: Build and push Docker image to ACR
+    inputs:
+      azureSubscription: NexTops-ServiceConnection
+      scriptType: bash
+      scriptLocation: inlineScript
+      inlineScript: |
+        az acr build \
+          --registry $(ACR_NAME) \
+          --image $(IMAGE_NAME):$(Build.BuildId) \
+          --image $(IMAGE_NAME):latest \
+          --file Dockerfile .
+
+  - script: |
+      echo "##vso[task.setvariable variable=imageTag;isOutput=true]$(Build.BuildId)"
+    name: setTag
+    displayName: Export image tag for CD pipeline
