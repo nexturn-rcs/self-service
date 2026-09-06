@@ -24,6 +24,11 @@ on:
         required: false
         type: string
         default: "Microservice managed via Nexturn RCS automation"
+      team_name:
+        description: "Team that owns this service"
+        required: false
+        type: string
+        default: ""
       cicd_system:
         description: "CI/CD destination system"
         required: false
