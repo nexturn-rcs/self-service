@@ -1,0 +1,25 @@
+replicaCount: 1
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+autoscaling:
+  enabled: false
+
+ingress:
+  enabled: false
+
+env:
+  APP_ENV: dev
+
+config:
+  LOG_LEVEL: DEBUG
+
+secret:
+  DATABASE_PASSWORD: dev-password

@@ -43,13 +43,13 @@ def create_github_repo(org_name, repo_name, description, token):
         error_body = e.read().decode('utf-8')
         if e.code == 422 and "already exists" in error_body:
             print(
-                f"❌ ERROR: Repository '{repo_name}' already exists in organization '{org_name}'.")
+                f"ERROR: Repository '{repo_name}' already exists in organization '{org_name}'.")
             print(
                 f"   Please choose a different service name or contact platformsupport@nexturn.com")
             sys.exit(1)
         else:
             print(
-                f"❌ Failed to create repository via API. Status Code: {e.code}")
+                f"Failed to create repository via API. Status Code: {e.code}")
             raise e
 
 
@@ -60,7 +60,7 @@ def process_templates_and_scaffold(source_dir, target_dir, mappings):
 
     if not os.path.exists(normalized_source):
         print(
-            f"❌ ERROR: Source template directory '{normalized_source}' does not exist!")
+            f"ERROR: Source template directory '{normalized_source}' does not exist!")
         return
 
     for root, dirs, files in os.walk(normalized_source):
@@ -74,16 +74,15 @@ def process_templates_and_scaffold(source_dir, target_dir, mappings):
         os.makedirs(dest_root, exist_ok=True)
 
         for file_name in files:
-            # CRITICAL FILTER: Completely skip and omit any legacy Backstage file definitions
             if file_name == "catalog-info.yaml":
-                print(f"✂️  Skipping and excluding legacy file: {file_name}")
+                print(f"Skipping legacy file: {file_name}")
                 continue
 
             src_file_path = os.path.join(root, file_name)
             dest_file_path = os.path.join(dest_root, file_name)
 
             print(
-                f"📄 Processing template file: {os.path.join(relative_path, file_name)}")
+                f"Processing template file: {os.path.join(relative_path, file_name)}")
 
             try:
                 with open(src_file_path, 'r', encoding='utf-8', errors='ignore') as f:
@@ -97,17 +96,19 @@ def process_templates_and_scaffold(source_dir, target_dir, mappings):
             except Exception as e:
                 shutil.copy2(src_file_path, dest_file_path)
 
-    print("🏁 Template generation step completed successfully!")
+    print("Template generation completed successfully!")
 
 
 if __name__ == "__main__":
     GITHUB_TOKEN = os.environ["PLATFORM_AUTOMATION_TOKEN"]
-    ORG_NAME = "nexturn-rcs"
+    ORG_NAME = os.environ.get("GITHUB_ORG", "nexturn-rcs")
     SERVICE_NAME = os.environ["SERVICE_NAME"]
     PROJECT_NAME = os.environ["PROJECT_NAME"]
     PYTHON_VERSION = os.environ["PYTHON_VERSION"]
     DESCRIPTION = os.environ.get(
         "DESCRIPTION", "Service managed via Nexturn RCS automation engine")
+    # SOURCE_TEMPLATE_DIR defaults to github-action subfolder for backward compatibility
+    SOURCE_TEMPLATE_DIR = os.environ.get("SOURCE_TEMPLATE_DIR", "templates/python/github-action")
 
     clone_url = create_github_repo(
         ORG_NAME, SERVICE_NAME, DESCRIPTION, GITHUB_TOKEN)
@@ -117,11 +118,12 @@ if __name__ == "__main__":
         "${{ values.repoName }}": SERVICE_NAME,
         "${{ values.projectName }}": PROJECT_NAME,
         "${{ values.pythonVersion }}": PYTHON_VERSION,
-        "${{ values.description }}": DESCRIPTION
+        "${{ values.description }}": DESCRIPTION,
+        "${{ values.acrName }}": os.environ.get("ACR_NAME", "")
     }
 
     process_templates_and_scaffold(
-        source_dir="templates/python",
+        source_dir=SOURCE_TEMPLATE_DIR,
         target_dir="workspace_repo",
         mappings=template_placeholders
     )
