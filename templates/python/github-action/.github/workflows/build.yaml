@@ -29,47 +29,50 @@ jobs:
           python-version: ${{ vars.PYTHON_VER }}
 
       - name: Install Dependencies
-        run: |
-          pip install -r requirements.txt
+        run: pip install -r requirements.txt
 
       - name: Run Tests
-        run: |
-          pytest
+        run: pytest
 
       - name: Calculate Docker Tag
         id: tag
         run: |
           BRANCH=${GITHUB_REF#refs/heads/}
-
           if [[ "$BRANCH" == feature/* ]]; then
             TAG=$(echo $GITHUB_SHA | cut -c1-7)
-
           elif [[ "$BRANCH" == "develop" ]]; then
             TAG=develop
-
           elif [[ "$BRANCH" == release/* ]]; then
             TAG=$(echo $BRANCH | sed 's|release/||')
-
           fi
-
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
+      - name: Check Azure Credentials
+        id: azure-check
+        run: |
+          if [ -n "$AZURE_CLIENT_ID" ]; then
+            echo "configured=true" >> $GITHUB_OUTPUT
+          else
+            echo "configured=false" >> $GITHUB_OUTPUT
+            echo "Azure credentials not configured — skipping Docker build/push"
+          fi
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+
       - name: Azure Login
-        uses: azure/login@v2
-        with:
-          creds: |
-            {
-              "clientId":"${{ secrets.AZURE_CLIENT_ID }}",
-              "clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}",
-              "subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}",
-              "tenantId":"${{ secrets.AZURE_TENANT_ID }}"
-            }
+        if: steps.azure-check.outputs.configured == 'true'
+        run: |
+          az login --service-principal \
+            --username "${{ secrets.AZURE_CLIENT_ID }}" \
+            --password "${{ secrets.AZURE_CLIENT_SECRET }}" \
+            --tenant "${{ secrets.AZURE_TENANT_ID }}"
 
       - name: Login ACR
-        run: |
-          az acr login --name ${{ vars.ACR_NAME }}
+        if: steps.azure-check.outputs.configured == 'true'
+        run: az acr login --name ${{ vars.ACR_NAME }}
 
       - name: Build Image
+        if: steps.azure-check.outputs.configured == 'true'
         run: |
           IMG=$(echo "${{ vars.ACR_NAME }}.azurecr.io/${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]')
           docker build \
@@ -80,12 +83,8 @@ jobs:
           echo "IMG=${IMG}" >> $GITHUB_ENV
 
       - name: Push Image
+        if: steps.azure-check.outputs.configured == 'true'
         run: |
           docker push ${IMG}:${GITHUB_SHA::7}
           docker push ${IMG}:${{ steps.tag.outputs.tag }}
           docker push ${IMG}:latest
-
-      - name: Build Summary
-        run: |
-          echo "Image pushed:"
-          echo "${IMG}:${GITHUB_SHA::7}"
