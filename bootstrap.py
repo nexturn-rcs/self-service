@@ -107,6 +107,7 @@ if __name__ == "__main__":
     PYTHON_VERSION = os.environ["PYTHON_VERSION"]
     DESCRIPTION = os.environ.get(
         "DESCRIPTION", "Service managed via Nexturn RCS automation engine")
+    # SOURCE_TEMPLATE_DIR defaults to github-action subfolder for backward compatibility
     SOURCE_TEMPLATE_DIR = os.environ.get("SOURCE_TEMPLATE_DIR", "templates/python/github-action")
 
     clone_url = create_github_repo(
@@ -117,7 +118,8 @@ if __name__ == "__main__":
         "${{ values.repoName }}": SERVICE_NAME,
         "${{ values.projectName }}": PROJECT_NAME,
         "${{ values.pythonVersion }}": PYTHON_VERSION,
-        "${{ values.description }}": DESCRIPTION
+        "${{ values.description }}": DESCRIPTION,
+        "${{ values.acrName }}": os.environ.get("ACR_NAME", "")
     }
 
     process_templates_and_scaffold(

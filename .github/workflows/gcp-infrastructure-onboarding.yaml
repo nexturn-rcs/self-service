@@ -6,8 +6,13 @@ on:
 
     workflow_dispatch:
         inputs:
-            ticket:
-                description: Ticket Number (RITM number) — leave blank when ServiceNow is not configured
+            snow_ritm_number:
+                description: ServiceNow RITM number (optional — only used if ServiceNow is connected)
+                required: false
+                default: ''
+                type: string
+            snow_ritm_sys_id:
+                description: ServiceNow RITM sys_id (optional — only used if ServiceNow is connected)
                 required: false
                 default: ''
                 type: string
@@ -62,7 +67,6 @@ jobs:
               shell: bash
               run: |
                   if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
-                    echo "ticket=${{ github.event.client_payload.snow_ritm_number }}" >> "$GITHUB_OUTPUT"
                     echo "project_name=${{ github.event.client_payload.project_name }}" >> "$GITHUB_OUTPUT"
                     echo "gcp_project_id=${{ github.event.client_payload.gcp_project_id }}" >> "$GITHUB_OUTPUT"
                     echo "environment=${{ github.event.client_payload.environment }}" >> "$GITHUB_OUTPUT"
@@ -73,7 +77,6 @@ jobs:
                     echo "snow_ritm_number=${{ github.event.client_payload.snow_ritm_number }}" >> "$GITHUB_OUTPUT"
                     echo "snow_ritm_sys_id=${{ github.event.client_payload.snow_ritm_sys_id }}" >> "$GITHUB_OUTPUT"
                   else
-                    echo "ticket=${{ inputs.ticket }}" >> "$GITHUB_OUTPUT"
                     echo "project_name=${{ inputs.project_name }}" >> "$GITHUB_OUTPUT"
                     echo "gcp_project_id=${{ inputs.gcp_project_id }}" >> "$GITHUB_OUTPUT"
                     echo "environment=${{ inputs.environment }}" >> "$GITHUB_OUTPUT"
@@ -81,8 +84,8 @@ jobs:
                     echo "enable_gke=${{ inputs.enable_gke }}" >> "$GITHUB_OUTPUT"
                     echo "enable_storage=${{ inputs.enable_storage }}" >> "$GITHUB_OUTPUT"
                     echo "enable_kms=${{ inputs.enable_kms }}" >> "$GITHUB_OUTPUT"
-                    echo "snow_ritm_number=${{ inputs.ticket }}" >> "$GITHUB_OUTPUT"
-                    echo "snow_ritm_sys_id=" >> "$GITHUB_OUTPUT"
+                    echo "snow_ritm_number=${{ inputs.snow_ritm_number }}" >> "$GITHUB_OUTPUT"
+                    echo "snow_ritm_sys_id=${{ inputs.snow_ritm_sys_id }}" >> "$GITHUB_OUTPUT"
                   fi
 
             #####################################################################
@@ -165,13 +168,13 @@ jobs:
               with:
                   token: ${{ secrets.PLATFORM_AUTOMATION_TOKEN }}
                   path: gcp-infra
-                  branch: feature/${{ steps.inputs.outputs.ticket }}
+                  branch: feature/${{ steps.inputs.outputs.snow_ritm_number || env.PROJECT_FOLDER }}
                   base: develop
                   delete-branch: false
                   commit-message: |
-                      ${{ steps.inputs.outputs.ticket }}: Add ${{ env.PROJECT_FOLDER }}
+                      ${{ steps.inputs.outputs.snow_ritm_number && format('{0}: ', steps.inputs.outputs.snow_ritm_number) || '' }}Add ${{ env.PROJECT_FOLDER }}
                   title: |
-                      ${{ steps.inputs.outputs.ticket }}: Add ${{ env.PROJECT_FOLDER }}
+                      ${{ steps.inputs.outputs.snow_ritm_number && format('{0}: ', steps.inputs.outputs.snow_ritm_number) || '' }}Add ${{ env.PROJECT_FOLDER }}
                   body: |
                       ## GCP Infrastructure Provisioning Request
 

@@ -10,40 +10,55 @@ variables:
   IMAGE_NAME: ${{ values.repoName }}
   PYTHON_VERSION: ${{ values.pythonVersion }}
 
-pool:
-  vmImage: ubuntu-latest
+stages:
+  - stage: Test
+    displayName: Run Tests
+    jobs:
+      - job: UnitTests
+        displayName: Python Unit Tests
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: UsePythonVersion@0
+            displayName: Set Python version
+            inputs:
+              versionSpec: $(PYTHON_VERSION)
 
-steps:
-  - task: UsePythonVersion@0
-    displayName: Set Python version
-    inputs:
-      versionSpec: $(PYTHON_VERSION)
+          - script: |
+              pip install -r requirements.txt
+              pytest tests/ --junitxml=test-results.xml
+            displayName: Install dependencies and run tests
 
-  - script: |
-      pip install -r requirements.txt
-      pytest tests/ --junitxml=test-results.xml
-    displayName: Install dependencies and run tests
+          - task: PublishTestResults@2
+            condition: always()
+            inputs:
+              testResultsFiles: test-results.xml
+              testRunTitle: Unit Tests
 
-  - task: PublishTestResults@2
-    condition: always()
-    inputs:
-      testResultsFiles: test-results.xml
-      testRunTitle: Unit Tests
+  - stage: Build
+    displayName: Build and Push Image
+    dependsOn: Test
+    condition: succeeded('Test')
+    jobs:
+      - job: DockerBuild
+        displayName: Build and Push to ACR
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - script: |
+              az login --service-principal \
+                --username "$(AZURE_CLIENT_ID)" \
+                --password "$(AZURE_CLIENT_SECRET)" \
+                --tenant "$(AZURE_TENANT_ID)"
+              az acr build \
+                --registry $(ACR_NAME) \
+                --image $(IMAGE_NAME):$(Build.BuildId) \
+                --image $(IMAGE_NAME):latest \
+                --file Dockerfile .
+            displayName: Build and push Docker image to ACR
+            condition: and(succeeded(), ne(variables['AZURE_CLIENT_ID'], ''))
 
-  - task: AzureCLI@2
-    displayName: Build and push Docker image to ACR
-    inputs:
-      azureSubscription: NexTops-ServiceConnection
-      scriptType: bash
-      scriptLocation: inlineScript
-      inlineScript: |
-        az acr build \
-          --registry $(ACR_NAME) \
-          --image $(IMAGE_NAME):$(Build.BuildId) \
-          --image $(IMAGE_NAME):latest \
-          --file Dockerfile .
-
-  - script: |
-      echo "##vso[task.setvariable variable=imageTag;isOutput=true]$(Build.BuildId)"
-    name: setTag
-    displayName: Export image tag for CD pipeline
+          - script: |
+              echo "##vso[task.setvariable variable=imageTag;isOutput=true]$(Build.BuildId)"
+            name: setTag
+            displayName: Export image tag for CD pipeline
