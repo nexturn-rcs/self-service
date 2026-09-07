@@ -7,8 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       ticket:
-        description: Ticket Number (e.g. OTIS-123 or RITM number)
-        required: true
+        description: Ticket Number (e.g. OTIS-123 or RITM number) — leave blank when ServiceNow is not configured
+        required: false
+        default: ''
         type: string
 
       project:
@@ -239,41 +240,41 @@ jobs:
             service-composer
 
       #####################################################################
-      # ServiceNow ticket updates
+      # ServiceNow ticket updates (commented out — not installed)
       #####################################################################
 
-      - name: Setup Python
-        if: ${{ steps.inputs.outputs.snow_ritm_number != '' || steps.inputs.outputs.snow_ritm_sys_id != '' }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
+      #- name: Setup Python
+      #  if: steps.inputs.outputs.snow_ritm_number != ''
+      #  uses: actions/setup-python@v5
+      #  with:
+      #    python-version: "3.10"
 
-      - name: Install Script Dependencies
-        if: ${{ steps.inputs.outputs.snow_ritm_number != '' || steps.inputs.outputs.snow_ritm_sys_id != '' }}
-        run: pip install requests
+      #- name: Install Script Dependencies
+      #  if: steps.inputs.outputs.snow_ritm_number != ''
+      #  run: pip install requests
 
-      - name: ServiceNow - Update Ticket With PR Details
-        if: ${{ success() && (steps.inputs.outputs.snow_ritm_number != '' || steps.inputs.outputs.snow_ritm_sys_id != '') }}
-        env:
-          SNOW_INSTANCE_URL: ${{ secrets.SNOW_INSTANCE_URL }}
-          SNOW_USERNAME: ${{ secrets.SNOW_USERNAME }}
-          SNOW_PASSWORD: ${{ secrets.SNOW_PASSWORD }}
-          RITM_NUMBER: ${{ steps.inputs.outputs.snow_ritm_number }}
-          RITM_SYS_ID: ${{ steps.inputs.outputs.snow_ritm_sys_id }}
-          REPO_NAME: ${{ steps.inputs.outputs.project }}
-          RESOURCE_GROUP: ${{ env.RESOURCE_GROUP }}
-          PR_URL: ${{ steps.create-pr.outputs.pull-request-url }}
-        run: |
-          python idp/scripts/update_snow_azure.py --mode pr_created
+      #- name: ServiceNow - Update Ticket With PR Details
+      #  if: success() && steps.inputs.outputs.snow_ritm_number != ''
+      #  env:
+      #    SNOW_INSTANCE_URL: ${{ secrets.SNOW_INSTANCE_URL }}
+      #    SNOW_USERNAME: ${{ secrets.SNOW_USERNAME }}
+      #    SNOW_PASSWORD: ${{ secrets.SNOW_PASSWORD }}
+      #    RITM_NUMBER: ${{ steps.inputs.outputs.snow_ritm_number }}
+      #    RITM_SYS_ID: ${{ steps.inputs.outputs.snow_ritm_sys_id }}
+      #    REPO_NAME: ${{ steps.inputs.outputs.project }}
+      #    RESOURCE_GROUP: ${{ env.RESOURCE_GROUP }}
+      #    PR_URL: ${{ steps.create-pr.outputs.pull-request-url }}
+      #  run: |
+      #    python idp/scripts/update_snow_azure.py --mode pr_created
 
-      - name: ServiceNow - Mark Failed
-        if: ${{ failure() && (steps.inputs.outputs.snow_ritm_number != '' || steps.inputs.outputs.snow_ritm_sys_id != '') }}
-        env:
-          SNOW_INSTANCE_URL: ${{ secrets.SNOW_INSTANCE_URL }}
-          SNOW_USERNAME: ${{ secrets.SNOW_USERNAME }}
-          SNOW_PASSWORD: ${{ secrets.SNOW_PASSWORD }}
-          RITM_NUMBER: ${{ steps.inputs.outputs.snow_ritm_number }}
-          RITM_SYS_ID: ${{ steps.inputs.outputs.snow_ritm_sys_id }}
-          REPO_NAME: ${{ steps.inputs.outputs.project }}
-        run: |
-          python idp/scripts/update_snow_azure.py --mode failed
+      #- name: ServiceNow - Mark Failed
+      #  if: failure() && steps.inputs.outputs.snow_ritm_number != ''
+      #  env:
+      #    SNOW_INSTANCE_URL: ${{ secrets.SNOW_INSTANCE_URL }}
+      #    SNOW_USERNAME: ${{ secrets.SNOW_USERNAME }}
+      #    SNOW_PASSWORD: ${{ secrets.SNOW_PASSWORD }}
+      #    RITM_NUMBER: ${{ steps.inputs.outputs.snow_ritm_number }}
+      #    RITM_SYS_ID: ${{ steps.inputs.outputs.snow_ritm_sys_id }}
+      #    REPO_NAME: ${{ steps.inputs.outputs.project }}
+      #  run: |
+      #    python idp/scripts/update_snow_azure.py --mode failed
