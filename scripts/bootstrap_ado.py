@@ -148,20 +148,12 @@ if __name__ == "__main__":
     # 3. Commit scaffolded files
     commit_templates(org_url, project, repo_id, token, workspace)
 
-    # 4. Create CI and CD pipelines (after commit_templates so repo exists;
-    #    a trigger run will happen on the NEXT push — first commit predates the pipeline)
+    # 4. Create CI and CD pipelines
     ci_id = create_pipeline(org_url, project, repo_id, f"{svc}-ci", "/azure-pipelines.yml", token)
     cd_id = create_pipeline(org_url, project, repo_id, f"{svc}-cd", "/azure-pipelines-deploy.yml", token)
 
-    # 4a. Trigger the CI pipeline immediately since the initial commit already happened
-    trigger_url = f"{org_url}/{project}/_apis/pipelines/{ci_id}/runs?api-version=7.1"
-    tr = requests.post(trigger_url, json={"resources": {"repositories": {"self": {"refName": "refs/heads/develop"}}}}, headers=_headers(token))
-    if tr.ok:
-        print(f"CI pipeline {ci_id} triggered (run {tr.json().get('id')})")
-    else:
-        print(f"Warning: could not trigger CI pipeline {ci_id}: {tr.status_code}")
-
-    # 5. Set pipeline variables (ACR + Azure SPN as secrets)
+    # 5. Set pipeline variables FIRST — must happen before the CI trigger below so the
+    #    ACR build step has AZURE_CLIENT_ID available when it runs.
     pipeline_vars = {
         "ACR_NAME":              {"value": acr_name},
         "PROJECT_NAME":          {"value": proj_name},
@@ -172,6 +164,15 @@ if __name__ == "__main__":
     }
     set_pipeline_variables(org_url, project, ci_id, pipeline_vars, token)
     set_pipeline_variables(org_url, project, cd_id, pipeline_vars, token)
+
+    # 5a. Trigger CI now that variables are set — the initial commit predates the pipeline
+    #     so it never auto-triggered; kick it off explicitly.
+    trigger_url = f"{org_url}/{project}/_apis/pipelines/{ci_id}/runs?api-version=7.1"
+    tr = requests.post(trigger_url, json={"resources": {"repositories": {"self": {"refName": "refs/heads/develop"}}}}, headers=_headers(token))
+    if tr.ok:
+        print(f"CI pipeline {ci_id} triggered (run {tr.json().get('id')})")
+    else:
+        print(f"Warning: could not trigger CI pipeline {ci_id}: {tr.status_code}")
 
     print(json.dumps({
         "repoUrl": repo.get("remoteUrl"),
