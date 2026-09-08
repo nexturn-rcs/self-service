@@ -148,9 +148,18 @@ if __name__ == "__main__":
     # 3. Commit scaffolded files
     commit_templates(org_url, project, repo_id, token, workspace)
 
-    # 4. Create CI and CD pipelines
+    # 4. Create CI and CD pipelines (after commit_templates so repo exists;
+    #    a trigger run will happen on the NEXT push — first commit predates the pipeline)
     ci_id = create_pipeline(org_url, project, repo_id, f"{svc}-ci", "/azure-pipelines.yml", token)
     cd_id = create_pipeline(org_url, project, repo_id, f"{svc}-cd", "/azure-pipelines-deploy.yml", token)
+
+    # 4a. Trigger the CI pipeline immediately since the initial commit already happened
+    trigger_url = f"{org_url}/{project}/_apis/pipelines/{ci_id}/runs?api-version=7.1"
+    tr = requests.post(trigger_url, json={"resources": {"repositories": {"self": {"refName": "refs/heads/develop"}}}}, headers=_headers(token))
+    if tr.ok:
+        print(f"CI pipeline {ci_id} triggered (run {tr.json().get('id')})")
+    else:
+        print(f"Warning: could not trigger CI pipeline {ci_id}: {tr.status_code}")
 
     # 5. Set pipeline variables (ACR + Azure SPN as secrets)
     pipeline_vars = {
