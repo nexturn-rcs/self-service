@@ -56,7 +56,6 @@ stages:
                 --image $(IMAGE_NAME):latest \
                 --file Dockerfile .
             displayName: Build and push Docker image to ACR
-            condition: and(succeeded(), ne(variables['AZURE_CLIENT_ID'], ''))
 
           - script: |
               echo "##vso[task.setvariable variable=imageTag;isOutput=true]$(Build.BuildId)"

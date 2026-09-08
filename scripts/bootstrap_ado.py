@@ -37,8 +37,13 @@ def create_ado_repo(org_url, project, repo_name, token):
     url = f"{org_url}/{project}/_apis/git/repositories?api-version=7.1"
     r = requests.post(url, json={"name": repo_name}, headers=_headers(token))
     if r.status_code == 409:
-        print(f"ERROR: Repository '{repo_name}' already exists in project '{project}'.")
-        sys.exit(1)
+        # Repo already exists — fetch it so bootstrap is safe to re-run
+        existing = requests.get(url, headers=_headers(token)).json()
+        for repo in existing.get("value", []):
+            if repo["name"] == repo_name:
+                print(f"Repository '{repo_name}' already exists (id={repo['id']}), continuing.")
+                return repo
+        raise RuntimeError(f"Repository '{repo_name}' exists but could not be fetched.")
     r.raise_for_status()
     data = r.json()
     print(f"Repository created: {data['remoteUrl']}")
