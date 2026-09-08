@@ -124,6 +124,7 @@ jobs:
       - name: Helm Deploy
         run: |
           APP_NAME=$(echo "${{ vars.PROJECT_NAME }}" | tr '[:upper:]' '[:lower:]')
+          echo "APP_NAME=$APP_NAME" >> $GITHUB_ENV
           helm upgrade \
             --install \
             "${APP_NAME}" \
