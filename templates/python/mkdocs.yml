@@ -1,8 +1,0 @@
-site_name: ${{ values.repoName }}
-
-nav:
-  - Home: index.md
-  - Architecture: architecture.md
-
-plugins:
-  - techdocs-core
