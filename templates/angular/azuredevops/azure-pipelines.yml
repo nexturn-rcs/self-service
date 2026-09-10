@@ -24,7 +24,7 @@ stages:
               versionSpec: "20.x"
 
           - script: |
-              npm ci
+              npm install
               npm test -- --watch=false --browsers=ChromeHeadless
             displayName: Install dependencies and run tests
 
