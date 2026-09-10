@@ -47,7 +47,7 @@ stages:
                     overrideValues: image.tag=$(resources.pipeline.ci.runID),image.repository=$(ACR_NAME).azurecr.io/$(IMAGE_NAME)
                     install: true
                     waitForExecution: true
-                    arguments: --timeout 5m
+                    arguments: --timeout 10m --cleanup-on-fail --create-namespace
 
   - stage: Deploy_Stage
     displayName: Deploy to Stage
@@ -77,7 +77,7 @@ stages:
                     overrideValues: image.tag=$(resources.pipeline.ci.runID),image.repository=$(ACR_NAME).azurecr.io/$(IMAGE_NAME)
                     install: true
                     waitForExecution: true
-                    arguments: --timeout 5m
+                    arguments: --timeout 10m --cleanup-on-fail --create-namespace
 
   - stage: Deploy_Prod
     displayName: Deploy to Prod
@@ -107,4 +107,4 @@ stages:
                     overrideValues: image.tag=$(resources.pipeline.ci.runID),image.repository=$(ACR_NAME).azurecr.io/$(IMAGE_NAME)
                     install: true
                     waitForExecution: true
-                    arguments: --timeout 5m
+                    arguments: --timeout 10m --cleanup-on-fail --create-namespace
