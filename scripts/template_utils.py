@@ -21,7 +21,11 @@ def process_templates(source_dir, target_dir, mappings):
             if file_name == "catalog-info.yaml":
                 continue
             src_path = os.path.join(root, file_name)
-            dst_path = os.path.join(dest_root, file_name)
+            # Also apply mappings to the filename itself (e.g. ${{ values.repoName }}.csproj)
+            dest_file_name = file_name
+            for placeholder, value in mappings.items():
+                dest_file_name = dest_file_name.replace(placeholder, value)
+            dst_path = os.path.join(dest_root, dest_file_name)
             print(f"Processing: {os.path.join(relative_path, file_name)}")
             try:
                 with open(src_path, "r", encoding="utf-8", errors="ignore") as f:
