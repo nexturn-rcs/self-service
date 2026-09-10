@@ -1,0 +1,64 @@
+trigger:
+  branches:
+    include:
+      - develop
+      - feature/*
+      - release/*
+
+variables:
+  ACR_NAME: ${{ values.acrName }}
+  IMAGE_NAME: ${{ values.repoName }}
+
+stages:
+  - stage: Test
+    displayName: Run Tests
+    jobs:
+      - job: UnitTests
+        displayName: .NET Unit Tests
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: UseDotNet@2
+            displayName: Set .NET version
+            inputs:
+              version: "8.0.x"
+
+          - script: |
+              dotnet restore src/
+              dotnet test src/ --no-restore --verbosity normal --logger trx --results-directory $(Agent.TempDirectory)
+            displayName: Restore and run tests
+
+          - task: PublishTestResults@2
+            condition: always()
+            inputs:
+              testResultsFormat: VSTest
+              testResultsFiles: "$(Agent.TempDirectory)/*.trx"
+              testRunTitle: Unit Tests
+
+  - stage: Build
+    displayName: Build and Push Image
+    dependsOn: Test
+    condition: succeeded('Test')
+    jobs:
+      - job: DockerBuild
+        displayName: Build and Push to ACR
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - script: |
+              az login --service-principal \
+                --username "$(AZURE_CLIENT_ID)" \
+                --password "$(AZURE_CLIENT_SECRET)" \
+                --tenant "$(AZURE_TENANT_ID)"
+              az acr build \
+                --registry $(ACR_NAME) \
+                --image $(IMAGE_NAME):$(Build.BuildId) \
+                --image $(IMAGE_NAME):latest \
+                --file Dockerfile .
+            displayName: Build and push Docker image to ACR
+            condition: and(succeeded(), ne(variables['AZURE_CLIENT_ID'], ''))
+
+          - script: |
+              echo "##vso[task.setvariable variable=imageTag;isOutput=true]$(Build.BuildId)"
+            name: setTag
+            displayName: Export image tag for CD pipeline

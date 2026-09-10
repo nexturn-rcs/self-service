@@ -1,0 +1,110 @@
+trigger: none
+
+resources:
+  pipelines:
+    - pipeline: ci
+      source: ${{ values.repoName }}-ci
+      trigger:
+        branches:
+          include:
+            - develop
+            - release/*
+            - main
+
+variables:
+  IMAGE_NAME: ${{ values.repoName }}
+  RELEASE_NAME: ${{ values.repoName }}
+  CHART_PATH: deploy/helm
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+  - stage: Deploy_Dev
+    displayName: Deploy to Dev
+    condition: eq(variables['resources.pipeline.ci.sourceBranch'], 'refs/heads/develop')
+    jobs:
+      - deployment: DeployDev
+        displayName: Helm deploy — dev
+        environment: ${{ values.projectName }}-dev
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                - task: HelmDeploy@0
+                  displayName: Helm upgrade (dev)
+                  inputs:
+                    connectionType: Azure Resource Manager
+                    azureSubscription: NexTops-ServiceConnection
+                    azureResourceGroup: rg-${{ values.projectName }}-dev
+                    kubernetesCluster: ${{ values.projectName }}-dev-aks
+                    namespace: ${{ values.projectName }}-dev
+                    command: upgrade
+                    chartType: FilePath
+                    chartPath: $(CHART_PATH)
+                    releaseName: $(RELEASE_NAME)
+                    overrideValues: image.tag=$(resources.pipeline.ci.runID),image.repository=$(ACR_NAME).azurecr.io/$(IMAGE_NAME)
+                    install: true
+                    waitForExecution: true
+                    arguments: --timeout 5m
+
+  - stage: Deploy_Stage
+    displayName: Deploy to Stage
+    dependsOn: []
+    condition: startsWith(variables['resources.pipeline.ci.sourceBranch'], 'refs/heads/release/')
+    jobs:
+      - deployment: DeployStage
+        displayName: Helm deploy — stage
+        environment: ${{ values.projectName }}-stage
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                - task: HelmDeploy@0
+                  displayName: Helm upgrade (stage)
+                  inputs:
+                    connectionType: Azure Resource Manager
+                    azureSubscription: NexTops-ServiceConnection
+                    azureResourceGroup: rg-${{ values.projectName }}-stage
+                    kubernetesCluster: ${{ values.projectName }}-stage-aks
+                    namespace: ${{ values.projectName }}-stage
+                    command: upgrade
+                    chartType: FilePath
+                    chartPath: $(CHART_PATH)
+                    releaseName: $(RELEASE_NAME)
+                    overrideValues: image.tag=$(resources.pipeline.ci.runID),image.repository=$(ACR_NAME).azurecr.io/$(IMAGE_NAME)
+                    install: true
+                    waitForExecution: true
+                    arguments: --timeout 5m
+
+  - stage: Deploy_Prod
+    displayName: Deploy to Prod
+    dependsOn: []
+    condition: eq(variables['resources.pipeline.ci.sourceBranch'], 'refs/heads/main')
+    jobs:
+      - deployment: DeployProd
+        displayName: Helm deploy — prod
+        environment: ${{ values.projectName }}-prod
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                - task: HelmDeploy@0
+                  displayName: Helm upgrade (prod)
+                  inputs:
+                    connectionType: Azure Resource Manager
+                    azureSubscription: NexTops-ServiceConnection
+                    azureResourceGroup: rg-${{ values.projectName }}-prod
+                    kubernetesCluster: ${{ values.projectName }}-prod-aks
+                    namespace: ${{ values.projectName }}-prod
+                    command: upgrade
+                    chartType: FilePath
+                    chartPath: $(CHART_PATH)
+                    releaseName: $(RELEASE_NAME)
+                    overrideValues: image.tag=$(resources.pipeline.ci.runID),image.repository=$(ACR_NAME).azurecr.io/$(IMAGE_NAME)
+                    install: true
+                    waitForExecution: true
+                    arguments: --timeout 5m
