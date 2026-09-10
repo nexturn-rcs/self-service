@@ -1,17 +1,17 @@
 dev:
-  resourceGroup: RG-NEXTOPS-POC-GLOBAL-001
+  resourceGroup: rg-${{ values.projectName }}-dev
   aksCluster: ${{ values.projectName }}-dev-aks
   acaEnvironment: ${{ values.projectName }}-dev-env
   namespace: ${{ values.projectName }}-dev
 
 stage:
-  resourceGroup: RG-NEXTOPS-POC-GLOBAL-001
+  resourceGroup: rg-${{ values.projectName }}-stage
   aksCluster: ${{ values.projectName }}-stage-aks
   acaEnvironment: ${{ values.projectName }}-stage-env
   namespace: ${{ values.projectName }}-stage
 
 prod:
-  resourceGroup: RG-NEXTOPS-POC-GLOBAL-001
+  resourceGroup: rg-${{ values.projectName }}-prod
   aksCluster: ${{ values.projectName }}-prod-aks
   acaEnvironment: ${{ values.projectName }}-prod-env
   namespace: ${{ values.projectName }}-prod
