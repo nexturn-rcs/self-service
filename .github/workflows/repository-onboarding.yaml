@@ -14,11 +14,6 @@ on:
         description: "Service / Repository Name (e.g., user-service)"
         required: true
         type: string
-      python_version:
-        description: "Python Version"
-        required: true
-        type: string
-        default: "3.12"
       description:
         description: "Service Description"
         required: false
@@ -88,7 +83,6 @@ jobs:
           if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
             echo "project_name=${{ github.event.client_payload.project_name }}" >> "$GITHUB_OUTPUT"
             echo "service_name=${{ github.event.client_payload.service_name }}" >> "$GITHUB_OUTPUT"
-            echo "python_version=${{ github.event.client_payload.python_version }}" >> "$GITHUB_OUTPUT"
             echo "description=${{ github.event.client_payload.description }}" >> "$GITHUB_OUTPUT"
             echo "language=${{ github.event.client_payload.language || 'python' }}" >> "$GITHUB_OUTPUT"
             echo "cicd_system=${{ github.event.client_payload.cicd_system || 'github-action' }}" >> "$GITHUB_OUTPUT"
@@ -101,7 +95,6 @@ jobs:
           else
             echo "project_name=${{ github.event.inputs.project_name }}" >> "$GITHUB_OUTPUT"
             echo "service_name=${{ github.event.inputs.service_name }}" >> "$GITHUB_OUTPUT"
-            echo "python_version=${{ github.event.inputs.python_version }}" >> "$GITHUB_OUTPUT"
             echo "description=${{ github.event.inputs.description }}" >> "$GITHUB_OUTPUT"
             echo "language=${{ github.event.inputs.language }}" >> "$GITHUB_OUTPUT"
             echo "cicd_system=${{ github.event.inputs.cicd_system }}" >> "$GITHUB_OUTPUT"
@@ -136,7 +129,7 @@ jobs:
           GITHUB_ORG: ${{ vars.GITHUB_ORG || 'nexturn-rcs' }}
           SERVICE_NAME: ${{ steps.inputs.outputs.service_name }}
           PROJECT_NAME: ${{ steps.inputs.outputs.project_name }}
-          PYTHON_VERSION: ${{ steps.inputs.outputs.python_version }}
+          PYTHON_VERSION: 3.11
           DESCRIPTION: ${{ steps.inputs.outputs.description }}
           ACR_NAME: ${{ vars.ACR_NAME || 'nextopsacrdemo' }}
           SOURCE_TEMPLATE_DIR: templates/${{ steps.inputs.outputs.language }}/github-action
@@ -153,7 +146,7 @@ jobs:
           AZURE_SUBSCRIPTION_ID: ${{ secrets.GLOBAL_AZURE_SUBSCRIPTION_ID }}
         run: |
           gh variable set PROJECT_NAME --body "${{ steps.inputs.outputs.project_name }}" --repo "$REPO_SLUG"
-          gh variable set PYTHON_VER --body "${{ steps.inputs.outputs.python_version }}" --repo "$REPO_SLUG"
+          gh variable set PYTHON_VER --body "3.11" --repo "$REPO_SLUG"
           gh variable set ACR_NAME --body "${{ vars.ACR_NAME || 'nextopsacrdemo' }}" --repo "$REPO_SLUG"
           gh variable set DEPLOY_TARGET --body "AKS" --repo "$REPO_SLUG"
           AZURE_JSON='{"clientId":"'"$AZURE_CLIENT_ID"'","clientSecret":"'"$AZURE_CLIENT_SECRET"'","subscriptionId":"'"$AZURE_SUBSCRIPTION_ID"'","tenantId":"'"$AZURE_TENANT_ID"'"}'
@@ -188,7 +181,7 @@ jobs:
         env:
           SERVICE_NAME: ${{ steps.inputs.outputs.service_name }}
           PROJECT_NAME: ${{ steps.inputs.outputs.project_name }}
-          PYTHON_VERSION: ${{ steps.inputs.outputs.python_version }}
+          PYTHON_VERSION: 3.11
           DESCRIPTION: ${{ steps.inputs.outputs.description }}
           ACR_NAME: ${{ vars.ACR_NAME || 'nextopsacrdemo' }}
           ADO_CLIENT_ID: ${{ steps.inputs.outputs.ado_client_id }}
