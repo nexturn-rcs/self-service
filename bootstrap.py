@@ -79,7 +79,11 @@ def process_templates_and_scaffold(source_dir, target_dir, mappings):
                 continue
 
             src_file_path = os.path.join(root, file_name)
-            dest_file_path = os.path.join(dest_root, file_name)
+            # Also apply mappings to the filename itself (e.g. ${{ values.repoName }}.csproj)
+            dest_file_name = file_name
+            for placeholder, live_value in mappings.items():
+                dest_file_name = dest_file_name.replace(placeholder, live_value)
+            dest_file_path = os.path.join(dest_root, dest_file_name)
 
             print(
                 f"Processing template file: {os.path.join(relative_path, file_name)}")

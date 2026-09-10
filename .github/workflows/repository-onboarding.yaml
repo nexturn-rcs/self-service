@@ -29,6 +29,15 @@ on:
         required: false
         type: string
         default: ""
+      language:
+        description: "Application language / framework"
+        required: false
+        type: choice
+        options:
+          - python
+          - angular
+          - dotnet
+        default: python
       cicd_system:
         description: "CI/CD destination system"
         required: false
@@ -81,6 +90,7 @@ jobs:
             echo "service_name=${{ github.event.client_payload.service_name }}" >> "$GITHUB_OUTPUT"
             echo "python_version=${{ github.event.client_payload.python_version }}" >> "$GITHUB_OUTPUT"
             echo "description=${{ github.event.client_payload.description }}" >> "$GITHUB_OUTPUT"
+            echo "language=${{ github.event.client_payload.language || 'python' }}" >> "$GITHUB_OUTPUT"
             echo "cicd_system=${{ github.event.client_payload.cicd_system || 'github-action' }}" >> "$GITHUB_OUTPUT"
             echo "snow_ritm_number=${{ github.event.client_payload.snow_ritm_number }}" >> "$GITHUB_OUTPUT"
             echo "snow_ritm_sys_id=${{ github.event.client_payload.snow_ritm_sys_id }}" >> "$GITHUB_OUTPUT"
@@ -93,6 +103,7 @@ jobs:
             echo "service_name=${{ github.event.inputs.service_name }}" >> "$GITHUB_OUTPUT"
             echo "python_version=${{ github.event.inputs.python_version }}" >> "$GITHUB_OUTPUT"
             echo "description=${{ github.event.inputs.description }}" >> "$GITHUB_OUTPUT"
+            echo "language=${{ github.event.inputs.language }}" >> "$GITHUB_OUTPUT"
             echo "cicd_system=${{ github.event.inputs.cicd_system }}" >> "$GITHUB_OUTPUT"
             echo "snow_ritm_number=${{ github.event.inputs.snow_ritm_number }}" >> "$GITHUB_OUTPUT"
             echo "snow_ritm_sys_id=${{ github.event.inputs.snow_ritm_sys_id }}" >> "$GITHUB_OUTPUT"
@@ -128,7 +139,7 @@ jobs:
           PYTHON_VERSION: ${{ steps.inputs.outputs.python_version }}
           DESCRIPTION: ${{ steps.inputs.outputs.description }}
           ACR_NAME: ${{ vars.ACR_NAME || 'nextopsacrdemo' }}
-          SOURCE_TEMPLATE_DIR: templates/python/github-action
+          SOURCE_TEMPLATE_DIR: templates/${{ steps.inputs.outputs.language }}/github-action
         run: python bootstrap.py
 
       - name: Set GitHub Repo Variables and Secrets
@@ -189,7 +200,7 @@ jobs:
           AZURE_CLIENT_SECRET: ${{ secrets.GLOBAL_AZURE_CLIENT_SECRET }}
           AZURE_TENANT_ID: ${{ secrets.GLOBAL_AZURE_TENANT_ID }}
           AZURE_SUBSCRIPTION_ID: ${{ secrets.GLOBAL_AZURE_SUBSCRIPTION_ID }}
-          SOURCE_TEMPLATE_DIR: templates/python/azuredevops
+          SOURCE_TEMPLATE_DIR: templates/${{ steps.inputs.outputs.language }}/azuredevops
         run: python scripts/bootstrap_ado.py
 
       # ── ServiceNow status update (both paths) ───────────────────────────────────
