@@ -42,11 +42,16 @@ def create_github_repo(org_name, repo_name, description, token):
     except urllib.error.HTTPError as e:
         error_body = e.read().decode('utf-8')
         if e.code == 422 and "already exists" in error_body:
-            print(
-                f"ERROR: Repository '{repo_name}' already exists in organization '{org_name}'.")
-            print(
-                f"   Please choose a different service name or contact platformsupport@nexturn.com")
-            sys.exit(1)
+            print(f"Repository '{repo_name}' already exists — fetching existing repo (idempotent retry).")
+            get_req = urllib.request.Request(
+                f"https://api.github.com/repos/{org_name}/{repo_name}",
+                headers=headers,
+                method='GET',
+            )
+            with urllib.request.urlopen(get_req) as r:
+                existing = json.loads(r.read().decode('utf-8'))
+                print(f"Using existing repository: {existing['html_url']}")
+                return existing['clone_url']
         else:
             print(
                 f"Failed to create repository via API. Status Code: {e.code}")
