@@ -98,11 +98,7 @@ jobs:
             echo "ado_tenant_id=${{ github.event.client_payload.ado_tenant_id }}" >> "$GITHUB_OUTPUT"
             echo "ado_org_url=${{ github.event.client_payload.ado_org_url }}" >> "$GITHUB_OUTPUT"
             echo "ado_target_project=${{ github.event.client_payload.ado_target_project }}" >> "$GITHUB_OUTPUT"
-            if [ "$_lang" = "python" ]; then
-              echo "python_version=${{ github.event.client_payload.python_version || '3.12' }}" >> "$GITHUB_OUTPUT"
-            else
-              echo "python_version=" >> "$GITHUB_OUTPUT"
-            fi
+            echo "python_version=3.12" >> "$GITHUB_OUTPUT"
           else
             echo "project_name=${{ github.event.inputs.project_name }}" >> "$GITHUB_OUTPUT"
             echo "service_name=${{ github.event.inputs.service_name }}" >> "$GITHUB_OUTPUT"
@@ -116,11 +112,7 @@ jobs:
             echo "ado_tenant_id=${{ github.event.inputs.ado_tenant_id }}" >> "$GITHUB_OUTPUT"
             echo "ado_org_url=${{ github.event.inputs.ado_org_url }}" >> "$GITHUB_OUTPUT"
             echo "ado_target_project=${{ github.event.inputs.ado_target_project }}" >> "$GITHUB_OUTPUT"
-            if [ "$_lang" = "python" ]; then
-              echo "python_version=${{ github.event.inputs.python_version || '3.12' }}" >> "$GITHUB_OUTPUT"
-            else
-              echo "python_version=" >> "$GITHUB_OUTPUT"
-            fi
+            echo "python_version=3.12" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Checkout Self-Service Repo
