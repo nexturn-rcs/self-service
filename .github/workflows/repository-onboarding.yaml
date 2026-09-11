@@ -33,11 +33,6 @@ on:
           - angular
           - dotnet
         default: python
-      python_version:
-        description: "Python version (only used when language=python)"
-        required: false
-        type: string
-        default: "3.12"
       cicd_system:
         description: "CI/CD destination system"
         required: false
