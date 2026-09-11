@@ -37,8 +37,15 @@ def create_ado_repo(org_url, project, repo_name, token):
     url = f"{org_url}/{project}/_apis/git/repositories?api-version=7.1"
     r = requests.post(url, json={"name": repo_name}, headers=_headers(token))
     if r.status_code == 409:
-        print(f"ERROR: Repository '{repo_name}' already exists in project '{project}'.")
-        sys.exit(1)
+        print(f"Repository '{repo_name}' already exists — fetching existing repo (idempotent retry).")
+        list_r = requests.get(url, headers=_headers(token))
+        list_r.raise_for_status()
+        repos = list_r.json().get("value", [])
+        existing = next((repo for repo in repos if repo["name"] == repo_name), None)
+        if existing:
+            print(f"Using existing repository: {existing.get('remoteUrl')}")
+            return existing
+        # Shouldn't happen, but fall through to raise
     r.raise_for_status()
     data = r.json()
     print(f"Repository created: {data['remoteUrl']}")
@@ -47,6 +54,13 @@ def create_ado_repo(org_url, project, repo_name, token):
 
 def commit_templates(org_url, project, repo_id, token, workspace_dir):
     """Initial commit of all scaffolded files to the new repo via ADO Git Push API."""
+    # Idempotent: skip if develop branch already exists (retry scenario)
+    branch_url = f"{org_url}/{project}/_apis/git/repositories/{repo_id}/refs?filter=heads/develop&api-version=7.1"
+    branch_r = requests.get(branch_url, headers=_headers(token))
+    if branch_r.ok and branch_r.json().get("value"):
+        print("develop branch already exists — skipping initial commit (idempotent retry).")
+        return
+
     changes = []
     for root, _dirs, files in os.walk(workspace_dir):
         for fname in files:
@@ -75,6 +89,13 @@ def commit_templates(org_url, project, repo_id, token, workspace_dir):
 
 def create_pipeline(org_url, project, repo_id, name, yaml_path, token):
     url = f"{org_url}/{project}/_apis/pipelines?api-version=7.1"
+    # Idempotent: return existing pipeline if already created (retry scenario)
+    list_r = requests.get(url, headers=_headers(token))
+    if list_r.ok:
+        for p in list_r.json().get("value", []):
+            if p["name"] == name:
+                print(f"Pipeline '{name}' already exists (id={p['id']}) — skipping creation.")
+                return p["id"]
     payload = {
         "name": name,
         "configuration": {
